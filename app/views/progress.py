@@ -4,6 +4,14 @@ from __future__ import annotations
 
 import streamlit as st
 from study_core.bootstrap import StudyRuntime
+from study_core.study_models import DomainMasteryReport
+
+from app.components import status_badge
+from app.theme import StatusTone
+
+# Domains the learner has any objective-level content/evidence for. The product
+# currently centers on Domain 1; the exit gate is per-domain and extensible.
+_EVALUATED_DOMAINS: tuple[int, ...] = (1,)
 
 
 def render(runtime: StudyRuntime, learner: str) -> None:
@@ -11,6 +19,8 @@ def render(runtime: StudyRuntime, learner: str) -> None:
     st.subheader("Progress")
     report = runtime.service.get_progress(learner_id=learner)
     st.caption(report.note)
+
+    _render_exit_gates(runtime, learner)
 
     measured = [o for o in report.objectives if o.attempts > 0]
     col1, col2, col3 = st.columns(3)
@@ -29,3 +39,34 @@ def render(runtime: StudyRuntime, learner: str) -> None:
             )
     else:
         st.info("No attempts recorded yet. Practice in Grill to build evidence.")
+
+
+def _render_exit_gates(runtime: StudyRuntime, learner: str) -> None:
+    st.markdown("**Domain exit gates**")
+    st.caption(
+        "A transparent internal study gate from committed evidence, " "not an AWS score prediction."
+    )
+    for domain_id in _EVALUATED_DOMAINS:
+        gate = runtime.mastery.evaluate(learner_id=learner, domain_id=domain_id)
+        _render_gate(domain_id, gate)
+    st.divider()
+
+
+def _render_gate(domain_id: int, gate: DomainMasteryReport) -> None:
+    tone = StatusTone.SUCCESS if gate.passed else StatusTone.PROGRESS
+    verdict = "PASSED" if gate.passed else "not yet met"
+    accuracy = f"{gate.grill_accuracy:.0%}" if gate.grill_accuracy is not None else "n/a"
+    with st.expander(f"Domain {domain_id} exit gate: {verdict}", expanded=domain_id == 1):
+        status_badge(
+            tone,
+            f"Domain {domain_id} gate {verdict} "
+            f"(grill accuracy {accuracy} over {gate.grill_attempts} attempts)",
+        )
+        for criterion in gate.criteria:
+            mark = "met" if criterion.met else "not met"
+            scope = "required" if criterion.mandatory else "informational"
+            icon_tone = StatusTone.SUCCESS if criterion.met else StatusTone.DANGER
+            if not criterion.mandatory and not criterion.met:
+                icon_tone = StatusTone.NEUTRAL
+            status_badge(icon_tone, f"{criterion.label} [{scope}]: {mark}")
+            st.caption(criterion.detail)

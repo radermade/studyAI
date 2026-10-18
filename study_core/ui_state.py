@@ -42,6 +42,48 @@ class ResumeState(StrictModel):
     position: int
 
 
+class LabStepView(StrictModel):
+    """One authored lab step with its prediction, hints, and reflection."""
+
+    step_id: str
+    display_order: int
+    instruction: str
+    prediction_prompt: str
+    mandatory: bool
+    hints: tuple[str, ...]
+    reflection: str
+
+
+class LabCheckpointInfo(StrictModel):
+    """Authored metadata for a checkpoint (not its per-run state)."""
+
+    checkpoint_id: str
+    label: str
+    step_id: str
+    validator_id: str | None
+    is_cleanup: bool
+    mandatory: bool
+
+
+class LabDefinitionView(StrictModel):
+    """A fully authored lab definition for rendering the Labs workspace."""
+
+    lab_id: str
+    title: str
+    objective_ids: tuple[str, ...]
+    cost_class: str
+    regions: tuple[str, ...]
+    scenario: str
+    architecture: str
+    prerequisites: str
+    objectives_text: str
+    region_note: str
+    recall_prompt: str
+    cleanup: str
+    steps: tuple[LabStepView, ...]
+    checkpoints: tuple[LabCheckpointInfo, ...]
+
+
 class UiStateService:
     """Durable curriculum, progress, notes, and resume operations."""
 
@@ -66,6 +108,66 @@ class UiStateService:
                 content_ref=r["content_ref"],
             )
             for r in rows
+        )
+
+    def get_lab_definition(self, lab_id: str) -> LabDefinitionView | None:
+        """Return a fully authored lab definition, or None if unknown."""
+        row = self._conn.execute(
+            "SELECT lab_id, title, objective_ids, cost_class, regions, scenario, architecture, "
+            "prerequisites, objectives_text, region_note, recall_prompt, cleanup "
+            "FROM lab_definitions WHERE lab_id = ?",
+            (lab_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        step_rows = self._conn.execute(
+            "SELECT step_id, display_order, instruction, prediction_prompt, mandatory, "
+            "hints_json, reflection FROM lab_steps WHERE lab_id = ? ORDER BY display_order ASC",
+            (lab_id,),
+        ).fetchall()
+        steps = tuple(
+            LabStepView(
+                step_id=str(s["step_id"]),
+                display_order=int(s["display_order"]),
+                instruction=str(s["instruction"]),
+                prediction_prompt=str(s["prediction_prompt"]),
+                mandatory=bool(s["mandatory"]),
+                hints=tuple(json.loads(s["hints_json"])),
+                reflection=str(s["reflection"]),
+            )
+            for s in step_rows
+        )
+        cp_rows = self._conn.execute(
+            "SELECT checkpoint_id, label, step_id, validator_id, is_cleanup, mandatory "
+            "FROM lab_checkpoints WHERE lab_id = ? ORDER BY checkpoint_id ASC",
+            (lab_id,),
+        ).fetchall()
+        checkpoints = tuple(
+            LabCheckpointInfo(
+                checkpoint_id=str(c["checkpoint_id"]),
+                label=str(c["label"]),
+                step_id=str(c["step_id"]),
+                validator_id=c["validator_id"],
+                is_cleanup=bool(c["is_cleanup"]),
+                mandatory=bool(c["mandatory"]),
+            )
+            for c in cp_rows
+        )
+        return LabDefinitionView(
+            lab_id=str(row["lab_id"]),
+            title=str(row["title"]),
+            objective_ids=tuple(json.loads(row["objective_ids"])),
+            cost_class=str(row["cost_class"]),
+            regions=tuple(json.loads(row["regions"])),
+            scenario=str(row["scenario"]),
+            architecture=str(row["architecture"]),
+            prerequisites=str(row["prerequisites"]),
+            objectives_text=str(row["objectives_text"]),
+            region_note=str(row["region_note"]),
+            recall_prompt=str(row["recall_prompt"]),
+            cleanup=str(row["cleanup"]),
+            steps=steps,
+            checkpoints=checkpoints,
         )
 
     def content_status(self, learner_id: str) -> dict[str, ContentStatus]:

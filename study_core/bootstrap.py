@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from study_core.db import DbConnection, apply_migrations, connect
 from study_core.lab_models import ReadOnlyValidator
 from study_core.lab_service import LabService
+from study_core.mastery import MasteryEvaluator
 from study_core.ports import (
     Clock,
     RandomSource,
@@ -29,6 +30,7 @@ class StudyRuntime:
     labs: LabService
     ui: UiStateService
     scored: ScoredSessionService
+    mastery: MasteryEvaluator
 
 
 def build_runtime(
@@ -65,4 +67,12 @@ def build_runtime(
     ui = UiStateService(conn, resolved_clock)
     resolved_scored_random = scored_random if scored_random is not None else SystemRandom()
     scored = ScoredSessionService(conn, resolved_clock, resolved_scored_random)
-    return StudyRuntime(connection=conn, service=service, labs=labs, ui=ui, scored=scored)
+    mastery = MasteryEvaluator(conn, resolved_clock, blueprint_version=blueprint_version)
+    return StudyRuntime(
+        connection=conn,
+        service=service,
+        labs=labs,
+        ui=ui,
+        scored=scored,
+        mastery=mastery,
+    )

@@ -335,7 +335,9 @@ def _ingest_labs(conn: DbConnection, labs: Sequence[Mapping[str, Any]]) -> None:
         lab_id = str(lab["lab_id"])
         conn.execute(
             "INSERT OR IGNORE INTO lab_definitions (lab_id, title, objective_ids, cost_class, "
-            "regions, architecture, cleanup) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "regions, architecture, cleanup, scenario, prerequisites, objectives_text, "
+            "region_note, recall_prompt) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 lab_id,
                 str(lab["title"]),
@@ -344,12 +346,18 @@ def _ingest_labs(conn: DbConnection, labs: Sequence[Mapping[str, Any]]) -> None:
                 json.dumps(list(lab["regions"])),
                 str(lab["architecture"]),
                 str(lab["cleanup"]),
+                str(lab.get("scenario", "")),
+                str(lab.get("prerequisites", "")),
+                str(lab.get("objectives_text", "")),
+                str(lab.get("region_note", "")),
+                str(lab.get("recall_prompt", "")),
             ),
         )
         for step in lab.get("steps", ()):
             conn.execute(
                 "INSERT OR IGNORE INTO lab_steps (lab_id, step_id, display_order, instruction, "
-                "prediction_prompt, mandatory) VALUES (?, ?, ?, ?, ?, ?)",
+                "prediction_prompt, mandatory, hints_json, reflection) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     lab_id,
                     str(step["step_id"]),
@@ -357,17 +365,21 @@ def _ingest_labs(conn: DbConnection, labs: Sequence[Mapping[str, Any]]) -> None:
                     str(step["instruction"]),
                     str(step["prediction_prompt"]),
                     1 if step["mandatory"] else 0,
+                    json.dumps([str(h) for h in step.get("hints", ())]),
+                    str(step.get("reflection", "")),
                 ),
             )
         for checkpoint in lab.get("checkpoints", ()):
             conn.execute(
                 "INSERT OR IGNORE INTO lab_checkpoints (lab_id, checkpoint_id, validator_id, "
-                "is_cleanup, mandatory) VALUES (?, ?, ?, ?, ?)",
+                "is_cleanup, mandatory, label, step_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     lab_id,
                     str(checkpoint["checkpoint_id"]),
                     checkpoint.get("validator_id"),
                     1 if checkpoint["is_cleanup"] else 0,
                     1 if checkpoint["mandatory"] else 0,
+                    str(checkpoint.get("label", "")),
+                    str(checkpoint.get("step_id", "")),
                 ),
             )

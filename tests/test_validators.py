@@ -31,6 +31,39 @@ def test_fake_validator_still_enforces_allowlist() -> None:
         fake.validate(ValidationRequest(validator_id="not-allowed", region="us-east-1"))
 
 
+def test_s3_bucket_present_interprets_buckets() -> None:
+    validator = AwsReadOnlyValidator(factory=_StubS3Factory(buckets=True))
+    evidence = validator.validate(
+        ValidationRequest(validator_id="s3-bucket-present", region="us-east-1")
+    )
+    assert evidence.kind == EvidenceKind.RESOURCE_PRESENT
+
+
+def test_s3_bucket_absent_interprets_no_buckets() -> None:
+    validator = AwsReadOnlyValidator(factory=_StubS3Factory(buckets=False))
+    evidence = validator.validate(
+        ValidationRequest(validator_id="s3-bucket-absent", region="us-east-1")
+    )
+    assert evidence.kind == EvidenceKind.RESOURCE_ABSENT
+
+
 class _FailFactory:
     def client(self, service: str, region: str, profile_name: str | None) -> object:
         raise AssertionError("client must not be built for a disallowed validator")
+
+
+class _StubS3Client:
+    def __init__(self, buckets: bool) -> None:
+        self._buckets = buckets
+
+    def list_buckets(self) -> dict[str, object]:
+        return {"Buckets": [{"Name": "b"}] if self._buckets else []}
+
+
+class _StubS3Factory:
+    def __init__(self, buckets: bool) -> None:
+        self._buckets = buckets
+
+    def client(self, service: str, region: str, profile_name: str | None) -> _StubS3Client:
+        assert service == "s3"
+        return _StubS3Client(self._buckets)

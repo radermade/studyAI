@@ -1,4 +1,10 @@
-"""Labs view: split workspace, hint ladder, evidence states, Console companion."""
+"""Labs view: data-driven split workspace with hint ladder and evidence states.
+
+Lab content (steps, prediction prompts, hints, reflections, checkpoints) is
+authored in ``content/labs.py`` and read back through
+``UiStateService.get_lab_definition``. This view renders whichever lab the
+learner selects; it holds no per-lab content of its own.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ import streamlit as st
 from study_core.bootstrap import StudyRuntime
 from study_core.lab_models import CheckpointState
 from study_core.lab_service import LabPreconditionError, LabValidationError
+from study_core.ui_state import LabDefinitionView, LabStepView
 
 from app.components import (
     architecture_diagram,
@@ -20,6 +27,8 @@ from app.components import (
 from app.theme import StatusTone
 
 _RUN_KEY = "lab_run_id"
+_LAB_KEY = "lab_selected_id"
+_REVEALED_KEY = "lab_hint_revealed"  # dict: step_id -> revealed level
 
 _STATE_TONE: dict[CheckpointState, StatusTone] = {
     CheckpointState.NOT_STARTED: StatusTone.NEUTRAL,
@@ -30,11 +39,18 @@ _STATE_TONE: dict[CheckpointState, StatusTone] = {
     CheckpointState.CLEANED_UP: StatusTone.SUCCESS,
 }
 
-_CONSOLE_URL = "https://console.aws.amazon.com/bedrock/home"
+_HINT_TITLES: tuple[str, ...] = (
+    "1. Conceptual nudge",
+    "2. Service/architecture area",
+    "3. Procedural guidance",
+    "4. Full solution (marks run assisted)",
+)
+
+_CONSOLE_URL = "https://console.aws.amazon.com/console/home"
 
 
 def render(runtime: StudyRuntime, learner: str) -> None:
-    """Render the lab workspace."""
+    """Render the lab workspace for the selected authored lab."""
     st.subheader("Labs")
     labs = [i for i in runtime.ui.list_curriculum() if i.item_type == "lab"]
     if not labs:
@@ -44,18 +60,44 @@ def render(runtime: StudyRuntime, learner: str) -> None:
     if runtime.labs is None:
         offline_notice()
 
-    lab = labs[0]
-    st.markdown(f"**{lab.title}**")
-    st.caption(f"Objectives: {', '.join(lab.objective_ids)}")
+    options = {item.item_id: item.title for item in labs}
+    ids = list(options)
+    selected = st.session_state.get(_LAB_KEY, ids[0])
+    if selected not in options:
+        selected = ids[0]
+    chosen = st.selectbox(
+        "Lab",
+        ids,
+        index=ids.index(selected),
+        format_func=lambda i: options[i],
+        key="lab_picker",
+    )
+    if chosen != st.session_state.get(_LAB_KEY):
+        # Switching labs clears any in-progress run reference and hint state.
+        st.session_state[_LAB_KEY] = chosen
+        st.session_state.pop(_RUN_KEY, None)
+        st.session_state.pop(_REVEALED_KEY, None)
+        st.rerun()
 
-    if st.session_state.get(_RUN_KEY) is None:
-        _render_start(runtime, learner, lab.item_id)
+    definition = runtime.ui.get_lab_definition(chosen)
+    if definition is None:
+        error_state("This lab's definition could not be loaded.")
         return
 
-    _render_workspace(runtime)
+    st.markdown(f"**{definition.title}**")
+    st.caption(f"Objectives: {', '.join(definition.objective_ids)}")
+
+    if st.session_state.get(_RUN_KEY) is None:
+        _render_start(runtime, learner, definition)
+        return
+
+    _render_workspace(runtime, definition)
 
 
-def _render_start(runtime: StudyRuntime, learner: str, lab_id: str) -> None:
+def _render_start(runtime: StudyRuntime, learner: str, lab: LabDefinitionView) -> None:
+    st.write(lab.scenario)
+    st.caption(f"Prerequisites: {lab.prerequisites}")
+    st.caption(f"Cost class: {lab.cost_class} · {lab.region_note}")
     st.write("Before starting, acknowledge cost and cleanup responsibilities.")
     cost = st.checkbox("I acknowledge potential AWS charges.", key="lab_cost")
     cleanup = st.checkbox("I will clean up all resources I create.", key="lab_cleanup")
@@ -63,8 +105,8 @@ def _render_start(runtime: StudyRuntime, learner: str, lab_id: str) -> None:
         try:
             run = runtime.labs.start_lab(
                 learner_id=learner,
-                lab_id=lab_id,
-                region="us-east-1",
+                lab_id=lab.lab_id,
+                region=lab.regions[0],
                 request_id=f"startlab-{uuid.uuid4().hex}",
                 acknowledged_cost=cost,
                 acknowledged_cleanup=cleanup,
@@ -73,96 +115,107 @@ def _render_start(runtime: StudyRuntime, learner: str, lab_id: str) -> None:
             error_state(str(exc))
             return
         st.session_state[_RUN_KEY] = run.run_id
+        st.session_state[_REVEALED_KEY] = {}
         st.rerun()
 
 
-def _render_workspace(runtime: StudyRuntime) -> None:
+def _render_workspace(runtime: StudyRuntime, lab: LabDefinitionView) -> None:
     run_id = st.session_state[_RUN_KEY]
     instructions, workspace = pane_layout("lab")
 
     with instructions:
-        st.markdown("**Instructions**")
-        architecture_diagram(
-            "flowchart LR\n  P[Prompt] --> A[Model A]\n  P --> B[Model B]\n"
-            "  A --> C[Compare quality/latency/cost]\n  B --> C",
-            "One prompt is sent to two Bedrock models; their quality, latency, and "
-            "cost are compared to choose the better fit.",
-        )
-        st.write("1. Confirm model access in the AWS Console.")
-        st.write("2. Invoke two models with the same prompt and record results.")
+        st.markdown("**Scenario**")
+        st.write(lab.scenario)
+        st.caption(lab.objectives_text)
+        architecture_diagram(_ARCHITECTURE_MERMAID, lab.architecture)
         st.link_button("Open AWS Console (new tab)", _CONSOLE_URL)
-        _render_hints(runtime, run_id)
+        st.markdown("**Steps**")
+        states = {cp.checkpoint_id: cp.state for cp in runtime.labs.checkpoint_states(run_id)}
+        for step in lab.steps:
+            _render_step(runtime, run_id, step)
 
     with workspace:
         st.markdown("**Evidence**")
-        _render_checkpoints(runtime, run_id)
+        _render_checkpoints(runtime, lab, run_id, states)
+        st.divider()
+        st.markdown("**Cleanup**")
+        st.write(lab.cleanup)
+        st.markdown("**Delayed recall**")
+        st.caption(lab.recall_prompt)
 
 
-_HINT_TEXT: dict[int, str] = {
-    1: "Think about which comparison dimensions actually decide the choice.",
-    2: "Look at the Bedrock model catalog and the InvokeModel latency/pricing data.",
-    3: "Invoke both models with identical input and capture tokens, time, and cost.",
-    4: "Pick the model meeting the quality floor at the lowest latency-adjusted cost; "
-    "record the measured numbers as your rationale.",
-}
-_HINT_TITLES: dict[int, str] = {
-    1: "1. Conceptual nudge",
-    2: "2. Service/architecture area",
-    3: "3. Procedural guidance",
-    4: "4. Full solution (marks run assisted)",
-}
-_REVEALED_KEY = "lab_hint_revealed"
+def _render_step(runtime: StudyRuntime, run_id: str, step: LabStepView) -> None:
+    tag = " (required)" if step.mandatory else " (optional)"
+    with st.expander(f"Step {step.display_order}{tag}", expanded=step.display_order == 1):
+        st.write(step.instruction)
+        st.caption(f"Predict first: {step.prediction_prompt}")
+        _render_step_hints(runtime, run_id, step)
+        if step.reflection:
+            st.caption(f"Reflect: {step.reflection}")
 
 
-def _render_hints(runtime: StudyRuntime, run_id: str) -> None:
-    st.markdown("**Hints**")
-    revealed = int(st.session_state.get(_REVEALED_KEY, 0))
-
-    # Progressive ladder: only the next level can be revealed, in order.
+def _render_step_hints(runtime: StudyRuntime, run_id: str, step: LabStepView) -> None:
+    if not step.hints:
+        return
+    revealed_map: dict[str, int] = dict(st.session_state.get(_REVEALED_KEY, {}))
+    revealed = int(revealed_map.get(step.step_id, 0))
+    st.markdown("_Hints_")
     for level in range(1, revealed + 1):
-        st.write(f"**{_HINT_TITLES[level]}**")
-        st.caption(_HINT_TEXT[level])
-
-    if revealed < 4:
+        st.write(f"**{_HINT_TITLES[level - 1]}**")
+        st.caption(step.hints[level - 1])
+    if revealed < len(step.hints):
         next_level = revealed + 1
-        warn = " This marks the run as assisted." if next_level == 4 else ""
-        if st.button(f"Reveal hint {next_level}.{warn}", key="lab_hint_reveal"):
-            # Persist the reveal before showing content.
-            runtime.labs.reveal_hint(run_id=run_id, step_id="s2", level=next_level)
-            st.session_state[_REVEALED_KEY] = next_level
+        warn = " This marks the run as assisted." if next_level == len(step.hints) else ""
+        if st.button(f"Reveal hint {next_level}.{warn}", key=f"lab_hint_reveal_{step.step_id}"):
+            runtime.labs.reveal_hint(run_id=run_id, step_id=step.step_id, level=next_level)
+            revealed_map[step.step_id] = next_level
+            st.session_state[_REVEALED_KEY] = revealed_map
             st.rerun()
     else:
-        st.caption("All hints revealed. This run counts as assisted.")
+        st.caption("All hints revealed for this step.")
 
 
-def _render_checkpoints(runtime: StudyRuntime, run_id: str) -> None:
-    # Checkpoint c1 is validated (read-only AWS); c2 is self-report only.
-    states = {cp.checkpoint_id: cp.state for cp in runtime.labs.checkpoint_states(run_id)}
-    c1 = states.get("c1-model-access", CheckpointState.NOT_STARTED)
-    c2 = states.get("c2-comparison-recorded", CheckpointState.NOT_STARTED)
-    status_badge(_STATE_TONE[c1], f"Model access: {c1.value}")
-    status_badge(_STATE_TONE[c2], f"Comparison recorded: {c2.value}")
+def _render_checkpoints(
+    runtime: StudyRuntime,
+    lab: LabDefinitionView,
+    run_id: str,
+    states: dict[str, CheckpointState],
+) -> None:
+    for cp in lab.checkpoints:
+        state = states.get(cp.checkpoint_id, CheckpointState.NOT_STARTED)
+        kind = "cleanup" if cp.is_cleanup else ("validated" if cp.validator_id else "self-report")
+        req = "required" if cp.mandatory else "optional"
+        status_badge(_STATE_TONE[state], f"{cp.label} [{kind}, {req}]: {state.value}")
 
-    if runtime.labs is not None and st.button("Check model access (read-only)", key="lab_check"):
-        try:
-            runtime.labs.check(
-                run_id=run_id,
-                checkpoint_id="c1-model-access",
-                event_id=f"check-{uuid.uuid4().hex}",
-            )
-            st.rerun()
-        except LabValidationError as exc:
-            error_state(str(exc))
-        except Exception:
-            error_state("AWS validation is unavailable right now.")
-
-    if st.button("Self-report comparison recorded", key="lab_selfreport"):
-        runtime.labs.record_self_report(
-            run_id=run_id,
-            checkpoint_id="c2-comparison-recorded",
-            event_id=f"sr-{uuid.uuid4().hex}",
-        )
-        st.rerun()
+        if cp.validator_id is not None:
+            disabled = runtime.labs is None
+            if st.button(
+                f"Check: {cp.label} (read-only)",
+                key=f"lab_check_{cp.checkpoint_id}",
+                disabled=disabled,
+            ):
+                try:
+                    runtime.labs.check(
+                        run_id=run_id,
+                        checkpoint_id=cp.checkpoint_id,
+                        event_id=f"check-{uuid.uuid4().hex}",
+                    )
+                    st.rerun()
+                except LabValidationError as exc:
+                    error_state(str(exc))
+                except Exception:
+                    error_state("AWS validation is unavailable right now.")
+        else:
+            if st.button(
+                f"Self-report: {cp.label}",
+                key=f"lab_selfreport_{cp.checkpoint_id}",
+            ):
+                runtime.labs.record_self_report(
+                    run_id=run_id,
+                    checkpoint_id=cp.checkpoint_id,
+                    event_id=f"sr-{uuid.uuid4().hex}",
+                )
+                st.rerun()
 
     if st.button("Complete lab", key="lab_complete"):
         try:
@@ -173,3 +226,12 @@ def _render_checkpoints(runtime: StudyRuntime, run_id: str) -> None:
             st.success(f"Lab completed {kind}.")
         except LabPreconditionError as exc:
             error_state(str(exc))
+
+
+# Generic flow diagram; each lab's text summary carries the specific detail.
+_ARCHITECTURE_MERMAID = (
+    "flowchart LR\n"
+    "  I[Inputs] --> P[AWS walkthrough steps]\n"
+    "  P --> V[Read-only validation]\n"
+    "  V --> O[Measured outcome]"
+)

@@ -304,6 +304,526 @@ QUESTIONS: list[dict[str, Any]] = [
             "d": (False, "A good generation model is not necessarily a good embedding model."),
         },
     },
+    # --- AIP-1.1 additional ------------------------------------------------
+    {
+        "question_id": "d1-wa-genai-lens",
+        "objective_ids": ["AIP-1.1"],
+        "prompt": (
+            "Your team is designing a production GenAI workload and wants a "
+            "structured way to review it for reliability, security, cost, and "
+            "operational excellence specific to generative AI. What should you use?"
+        ),
+        "scenario_constraint": "Need a structured, GenAI-specific architecture review.",
+        "difficulty": "easy",
+        "options": [
+            ("a", "The AWS Well-Architected Framework with the Generative AI Lens."),
+            ("b", "A one-page internal checklist written from memory."),
+            ("c", "Only a cost calculator spreadsheet."),
+            ("d", "A post-launch retrospective after the first outage."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "The Well-Architected Framework plus the Generative AI Lens gives a "
+            "structured, GenAI-specific review across the pillars before launch. "
+            "An ad hoc checklist, a cost-only view, or a post-incident review do "
+            "not provide that coverage proactively."
+        ),
+        "rationales": {
+            "a": (True, "Well-Architected + GenAI Lens is the structured, GenAI-specific review."),
+            "b": (False, "An informal checklist misses pillars and is not GenAI-specific."),
+            "c": (False, "Cost is one pillar; this ignores reliability, security, and ops."),
+            "d": (False, "Reviewing only after an outage is reactive, not a design review."),
+        },
+    },
+    {
+        "question_id": "d1-latency-budget-design",
+        "objective_ids": ["AIP-1.1"],
+        "prompt": (
+            "A customer-facing assistant must respond within a strict latency "
+            "budget, but the best-quality model is too slow for every request. "
+            "Which design best balances the business constraint?"
+        ),
+        "scenario_constraint": "Strict latency budget vs. a slow high-quality model.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Route simple requests to a fast model and reserve the slow model for cases that need it.",
+            ),
+            ("b", "Always use the slowest, highest-quality model for every request."),
+            ("c", "Remove the latency budget because quality matters more."),
+            ("d", "Cache one generic answer and return it for all requests."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Tiered routing by request complexity meets the latency budget while "
+            "preserving quality where it matters. Using the slow model always "
+            "breaks the budget, dropping the budget ignores the business "
+            "constraint, and one cached answer destroys correctness."
+        ),
+        "rationales": {
+            "a": (
+                True,
+                "Complexity-based routing balances latency and quality against the budget.",
+            ),
+            "b": (False, "Always using the slow model violates the stated latency budget."),
+            "c": (False, "Discarding the constraint ignores the business requirement."),
+            "d": (False, "A single cached answer is wrong for most inputs."),
+        },
+    },
+    # --- AIP-1.2 additional ------------------------------------------------
+    {
+        "question_id": "d1-provisioned-throughput",
+        "objective_ids": ["AIP-1.2", "AIP-2.2"],
+        "prompt": (
+            "A workload has steady, high-volume Bedrock traffic and needs "
+            "predictable throughput and cost rather than per-request on-demand "
+            "pricing. Which option fits best?"
+        ),
+        "scenario_constraint": "Steady high volume; predictable throughput and cost.",
+        "difficulty": "medium",
+        "options": [
+            ("a", "Amazon Bedrock Provisioned Throughput for the model."),
+            ("b", "On-demand invocation scaled by hope."),
+            ("c", "A single Lambda with a fixed concurrency of one."),
+            ("d", "Switching models randomly to spread load."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Provisioned Throughput gives predictable capacity and cost for "
+            "steady, high-volume workloads. On-demand is better for spiky or low "
+            "volume, a single-concurrency Lambda bottlenecks throughput, and "
+            "random model switching does not address capacity."
+        ),
+        "rationales": {
+            "a": (True, "Provisioned Throughput suits steady high volume with predictable cost."),
+            "b": (False, "Unmanaged on-demand gives neither predictable throughput nor cost."),
+            "c": (False, "Concurrency of one throttles a high-volume workload."),
+            "d": (False, "Random switching does not provide capacity guarantees."),
+        },
+    },
+    {
+        "question_id": "d1-finetune-vs-rag",
+        "objective_ids": ["AIP-1.2"],
+        "prompt": (
+            "You must ground an assistant in a large, frequently changing "
+            "internal knowledge base while keeping answers current with minimal "
+            "retraining. Which customization approach fits best?"
+        ),
+        "scenario_constraint": "Frequently changing knowledge; minimize retraining.",
+        "difficulty": "medium",
+        "options": [
+            ("a", "Retrieval Augmented Generation over the knowledge base."),
+            ("b", "Fine-tune the model nightly on the entire knowledge base."),
+            ("c", "Hard-code the knowledge into the system prompt."),
+            ("d", "Train a model from scratch on the documents."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "RAG keeps answers current by retrieving fresh content at query time "
+            "with no retraining as the knowledge base changes. Nightly "
+            "fine-tuning is costly and lags changes, prompt hard-coding does not "
+            "scale to a large corpus, and training from scratch is unjustified."
+        ),
+        "rationales": {
+            "a": (True, "RAG grounds on changing content with no retraining."),
+            "b": (False, "Frequent fine-tuning is expensive and still lags updates."),
+            "c": (False, "A large corpus will not fit or stay current in a prompt."),
+            "d": (False, "From-scratch training is wasteful and unnecessary here."),
+        },
+    },
+    # --- AIP-1.3 additional ------------------------------------------------
+    {
+        "question_id": "d1-data-quality-gate",
+        "objective_ids": ["AIP-1.3"],
+        "prompt": (
+            "Low-quality input records are degrading model responses. You want "
+            "to catch bad data before it reaches the model and track quality "
+            "over time. Which approach fits best?"
+        ),
+        "scenario_constraint": "Catch bad input before inference; monitor quality.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Validate inputs against quality rules in the pipeline and emit quality metrics.",
+            ),
+            ("b", "Send all records to the model and inspect complaints later."),
+            ("c", "Delete any record you are unsure about without logging."),
+            ("d", "Assume upstream systems always produce clean data."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "A validation stage with explicit quality rules plus emitted metrics "
+            "catches bad input before inference and makes quality observable. "
+            "Reacting to complaints is after the fact, silent deletion loses "
+            "signal, and assuming clean data ignores the observed problem."
+        ),
+        "rationales": {
+            "a": (True, "Pre-inference validation plus metrics is the quality gate."),
+            "b": (False, "Inspecting complaints later does not prevent bad outputs."),
+            "c": (False, "Silent deletion removes data and auditability."),
+            "d": (False, "The scenario shows upstream data is not clean."),
+        },
+    },
+    {
+        "question_id": "d1-pii-before-model",
+        "objective_ids": ["AIP-1.3", "AIP-3.2"],
+        "prompt": (
+            "Incoming support tickets may contain personal data that should not "
+            "be sent to the model verbatim. Where should detection and redaction "
+            "happen?"
+        ),
+        "scenario_constraint": "PII must not reach the model verbatim.",
+        "difficulty": "medium",
+        "options": [
+            ("a", "In the ingestion/preprocessing stage, before the model call."),
+            ("b", "After the model has already generated a response."),
+            ("c", "Nowhere; rely on the model to ignore personal data."),
+            ("d", "Only in quarterly manual audits of logs."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Detecting and redacting personal data in preprocessing ensures it "
+            "never reaches the model. Post-generation is too late, trusting the "
+            "model is not a control, and quarterly audits do not prevent exposure "
+            "at request time."
+        ),
+        "rationales": {
+            "a": (True, "Redaction before the model call prevents verbatim exposure."),
+            "b": (False, "Post-generation redaction means PII already reached the model."),
+            "c": (False, "Model behavior is not a privacy control."),
+            "d": (False, "Periodic audits do not prevent real-time exposure."),
+        },
+    },
+    # --- AIP-1.4 additional ------------------------------------------------
+    {
+        "question_id": "d1-vector-store-choice",
+        "objective_ids": ["AIP-1.4"],
+        "prompt": (
+            "You want a managed way to stand up a RAG knowledge base on AWS "
+            "without operating your own vector database cluster. Which option "
+            "fits best?"
+        ),
+        "scenario_constraint": "Managed RAG; avoid running a vector DB cluster.",
+        "difficulty": "easy",
+        "options": [
+            ("a", "Amazon Bedrock Knowledge Bases with a managed vector store."),
+            ("b", "Self-hosted vector database on EC2 you patch and scale."),
+            ("c", "A plain relational table with LIKE queries."),
+            ("d", "Store embeddings in flat files on local disk."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Bedrock Knowledge Bases provide a managed vector store and retrieval "
+            "pipeline without operating a cluster. Self-hosting adds ops burden, "
+            "a relational LIKE query is not semantic search, and flat files do "
+            "not scale or support vector search."
+        ),
+        "rationales": {
+            "a": (True, "Managed Knowledge Bases avoid running your own vector cluster."),
+            "b": (False, "Self-hosting is exactly the ops burden you wanted to avoid."),
+            "c": (False, "LIKE queries are keyword matching, not semantic retrieval."),
+            "d": (False, "Flat files do not provide scalable vector search."),
+        },
+    },
+    {
+        "question_id": "d1-vector-freshness",
+        "objective_ids": ["AIP-1.4"],
+        "prompt": (
+            "Source documents behind a knowledge base change throughout the day, "
+            "and stale retrievals are causing wrong answers. Which approach keeps "
+            "retrieval current?"
+        ),
+        "scenario_constraint": "Documents change through the day; avoid stale retrieval.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Incrementally sync/re-index changed documents so the vector store stays current.",
+            ),
+            ("b", "Re-index the entire corpus once a year."),
+            ("c", "Never update the index after the first load."),
+            ("d", "Delete the index whenever an answer is wrong."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Incremental synchronization and re-indexing of changed documents "
+            "keeps the vector store aligned with sources. Annual or never "
+            "re-indexing guarantees staleness, and deleting the index on each "
+            "wrong answer is destructive and does not address freshness."
+        ),
+        "rationales": {
+            "a": (True, "Incremental change detection and re-indexing keeps retrieval current."),
+            "b": (False, "Annual re-indexing leaves the index stale for most of the year."),
+            "c": (False, "Never updating guarantees stale retrieval."),
+            "d": (False, "Dropping the index is destructive and misses the real cause."),
+        },
+    },
+    # --- AIP-1.5 additional ------------------------------------------------
+    {
+        "question_id": "d1-hybrid-search",
+        "objective_ids": ["AIP-1.5"],
+        "prompt": (
+            "Semantic search misses results that users find by exact keyword "
+            "(part numbers, error codes), while keyword search misses conceptual "
+            "matches. Which retrieval approach addresses both?"
+        ),
+        "scenario_constraint": "Need both exact-term and conceptual matches.",
+        "difficulty": "medium",
+        "options": [
+            ("a", "Hybrid search combining keyword and semantic retrieval, then rerank."),
+            ("b", "Keyword search only."),
+            ("c", "Semantic search only."),
+            ("d", "Return the whole document and let the model find the answer."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Hybrid search blends lexical and semantic signals and reranks to "
+            "capture both exact terms and concepts. Either method alone misses "
+            "one case, and returning whole documents overflows context and buries "
+            "the answer."
+        ),
+        "rationales": {
+            "a": (True, "Hybrid + rerank captures exact terms and conceptual matches."),
+            "b": (False, "Keyword-only misses conceptual matches."),
+            "c": (False, "Semantic-only misses exact-term matches like codes."),
+            "d": (False, "Dumping whole documents wastes context and hides answers."),
+        },
+    },
+    {
+        "question_id": "d1-reranking",
+        "objective_ids": ["AIP-1.5"],
+        "prompt": (
+            "Your retriever returns relevant passages but often not in the best "
+            "order, so the model sometimes grounds on a weaker passage. Which "
+            "technique most directly improves which passages the model uses?"
+        ),
+        "scenario_constraint": "Relevant results retrieved but poorly ordered.",
+        "difficulty": "hard",
+        "options": [
+            ("a", "Add a reranking model to reorder retrieved passages by relevance."),
+            ("b", "Increase temperature on the generation model."),
+            ("c", "Return fewer total characters at random."),
+            ("d", "Disable retrieval and rely on model memory."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "A reranker reorders candidates so the strongest passages are "
+            "prioritized for grounding. Temperature affects generation "
+            "randomness not retrieval order, random truncation can drop the best "
+            "passage, and disabling retrieval removes grounding entirely."
+        ),
+        "rationales": {
+            "a": (True, "Reranking reorders passages so the model grounds on the best ones."),
+            "b": (False, "Temperature changes randomness, not retrieval ordering."),
+            "c": (False, "Random truncation may discard the most relevant passage."),
+            "d": (False, "Removing retrieval loses grounding on current data."),
+        },
+    },
+    # --- AIP-1.6 additional ------------------------------------------------
+    {
+        "question_id": "d1-prompt-versioning",
+        "objective_ids": ["AIP-1.6"],
+        "prompt": (
+            "Multiple engineers edit shared prompts and you need approvals, an "
+            "audit trail, and the ability to roll back a bad change. Which "
+            "capability best supports this governance?"
+        ),
+        "scenario_constraint": "Shared prompts need approval, audit, and rollback.",
+        "difficulty": "medium",
+        "options": [
+            ("a", "Amazon Bedrock Prompt Management with versioned, governed prompts."),
+            ("b", "Pasting prompts into chat messages ad hoc."),
+            ("c", "Keeping the only copy in one engineer's notebook."),
+            ("d", "Editing the live prompt directly with no record."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Prompt Management provides versioning, approval workflow, audit, and "
+            "rollback for shared prompts. Ad hoc messages, a single private copy, "
+            "or editing live with no record provide none of those governance "
+            "controls."
+        ),
+        "rationales": {
+            "a": (True, "Prompt Management gives versioning, approval, audit, and rollback."),
+            "b": (False, "Ad hoc chat prompts have no governance or history."),
+            "c": (False, "A private notebook is not shared, audited, or recoverable."),
+            "d": (False, "Editing live with no record prevents rollback and audit."),
+        },
+    },
+    {
+        "question_id": "d1-structured-output",
+        "objective_ids": ["AIP-1.6"],
+        "prompt": (
+            "A downstream system requires the model's output to be valid JSON "
+            "matching a fixed schema, and malformed output currently breaks it. "
+            "Which approach best enforces reliable structure?"
+        ),
+        "scenario_constraint": "Downstream needs schema-valid JSON; malformed output breaks it.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Constrain output to a JSON schema and validate it, rejecting or repairing invalid responses.",
+            ),
+            ("b", "Ask politely in the prompt and hope for valid JSON."),
+            ("c", "Parse free-form text with brittle string splitting."),
+            ("d", "Let the downstream system crash and retry forever."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Enforcing a JSON schema plus validation (and handling invalid "
+            "responses) gives reliable structured output. A hopeful prompt is "
+            "not a guarantee, brittle parsing fails on variation, and unbounded "
+            "crash-retry is not a fix."
+        ),
+        "rationales": {
+            "a": (True, "Schema constraint plus validation reliably enforces structure."),
+            "b": (False, "A prompt request alone does not guarantee valid JSON."),
+            "c": (False, "String splitting breaks on normal output variation."),
+            "d": (False, "Crash-and-retry does not produce valid output."),
+        },
+    },
+    # --- Evening-out additions (one more each for 1.2, 1.3, 1.4, 1.6) ------
+    {
+        "question_id": "d1-model-eval-selection",
+        "objective_ids": ["AIP-1.2"],
+        "prompt": (
+            "You must choose between several candidate foundation models for a "
+            "summarization feature and need a defensible selection rather than a "
+            "gut feel. Which approach best supports the decision?"
+        ),
+        "scenario_constraint": "Pick among candidate FMs with a defensible, measured rationale.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Evaluate candidates on a representative dataset for quality, latency, and cost, then choose.",
+            ),
+            ("b", "Pick the newest model announced in a blog post."),
+            ("c", "Choose the model with the largest context window regardless of task fit."),
+            ("d", "Select whichever model a teammate used on a different project."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "A structured evaluation on representative data across quality, "
+            "latency, and cost yields a defensible model choice. Recency, raw "
+            "context size, and unrelated prior use are not evidence that a model "
+            "fits this task."
+        ),
+        "rationales": {
+            "a": (
+                True,
+                "Measured evaluation on representative data is the defensible selection method.",
+            ),
+            "b": (False, "Newest-announced is not evidence of task fit."),
+            "c": (False, "A large context window alone does not mean better summaries."),
+            "d": (False, "Fit on a different project does not transfer to this task."),
+        },
+    },
+    {
+        "question_id": "d1-dedup-ingestion",
+        "objective_ids": ["AIP-1.3"],
+        "prompt": (
+            "Your ingestion pipeline pulls from several overlapping sources, so "
+            "near-duplicate documents inflate the index and skew retrieval toward "
+            "repeated content. Which step best addresses this during ingestion?"
+        ),
+        "scenario_constraint": "Overlapping sources create near-duplicates that skew retrieval.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Deduplicate near-identical content during ingestion before indexing.",
+            ),
+            ("b", "Index everything and raise top-k to compensate."),
+            ("c", "Randomly drop half of all documents to shrink the index."),
+            ("d", "Trust retrieval to ignore duplicates at query time."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Detecting and removing near-duplicate content during ingestion keeps "
+            "the index clean and prevents retrieval from over-weighting repeated "
+            "passages. Raising top-k adds more duplicates, random dropping loses "
+            "real content, and retrieval does not inherently suppress duplicates."
+        ),
+        "rationales": {
+            "a": (True, "Ingestion-time deduplication fixes the skew at its source."),
+            "b": (False, "More results surface even more duplicates."),
+            "c": (False, "Random dropping discards unique content, not just duplicates."),
+            "d": (False, "Retrieval does not automatically collapse duplicate passages."),
+        },
+    },
+    {
+        "question_id": "d1-metadata-filtering",
+        "objective_ids": ["AIP-1.4"],
+        "prompt": (
+            "Users in different departments must only retrieve documents for "
+            "their own department, and queries also need to scope by document "
+            "type. Which knowledge-base capability supports this directly?"
+        ),
+        "scenario_constraint": "Scope retrieval by department and document type.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Attach metadata to documents and apply metadata filters at retrieval time.",
+            ),
+            ("b", "Create a separate foundation model per department."),
+            ("c", "Add the department name to the end of the user's question text."),
+            ("d", "Return all documents and let the model decide what applies."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Document metadata plus retrieval-time metadata filters scope results "
+            "by department and type precisely. A model per department is wasteful "
+            "and does not scope data, appending text to the query is unreliable, "
+            "and returning everything defeats scoping and risks exposure."
+        ),
+        "rationales": {
+            "a": (True, "Metadata filtering is the direct mechanism for scoped retrieval."),
+            "b": (False, "A model per department does not control which documents are retrieved."),
+            "c": (False, "Query-text hints are not an enforced retrieval filter."),
+            "d": (False, "Returning everything removes the scoping the scenario requires."),
+        },
+    },
+    {
+        "question_id": "d1-few-shot-prompting",
+        "objective_ids": ["AIP-1.6"],
+        "prompt": (
+            "A classification prompt is inconsistent on edge cases, and you want "
+            "to steer the model toward the correct label format without "
+            "fine-tuning. Which prompt-engineering technique fits best?"
+        ),
+        "scenario_constraint": "Improve consistency on edge cases without fine-tuning.",
+        "difficulty": "medium",
+        "options": [
+            (
+                "a",
+                "Add a few representative labeled examples (few-shot) that cover the edge cases.",
+            ),
+            ("b", "Remove all instructions and let the model infer the task."),
+            ("c", "Repeat the same instruction several times in a row."),
+            ("d", "Raise the temperature to encourage more varied answers."),
+        ],
+        "correct_option_ids": ["a"],
+        "explanation": (
+            "Few-shot examples that cover the tricky cases demonstrate the "
+            "expected label and format, improving consistency without training. "
+            "Removing instructions increases ambiguity, repetition adds no new "
+            "signal, and higher temperature makes outputs less consistent."
+        ),
+        "rationales": {
+            "a": (
+                True,
+                "Edge-case few-shot examples steer format and consistency without training.",
+            ),
+            "b": (False, "Removing instructions makes the task more ambiguous."),
+            "c": (False, "Repeating the same instruction adds no new guidance."),
+            "d": (False, "Higher temperature reduces consistency, worsening the problem."),
+        },
+    },
 ]
 
 

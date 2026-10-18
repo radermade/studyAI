@@ -229,3 +229,51 @@ class SearchPage(StrictModel):
     results: tuple[SearchResult, ...]
     offset: int
     has_more: bool
+
+
+class MasteryObjective(StrictModel):
+    """Per-objective grill evidence inside a domain mastery report."""
+
+    objective_id: str
+    attempts: int
+    correct: int
+    accuracy: float | None
+    open_misconceptions: int
+    covered: bool
+
+
+class MasteryCriterion(StrictModel):
+    """One named exit-gate criterion with its pass state and reasoning.
+
+    `mandatory` criteria must all pass for the gate to pass; informational
+    criteria (e.g. an optional scored session) are shown but never block.
+    """
+
+    key: str
+    label: str
+    mandatory: bool
+    met: bool
+    detail: str
+
+
+class DomainMasteryReport(StrictModel):
+    """Evidence-based exit-gate evaluation for a single exam domain.
+
+    This is a transparent internal study gate, not an AWS score prediction.
+    Every input criterion is exposed so the pass/fail decision is auditable.
+    """
+
+    learner_id: str
+    domain_id: int
+    passed: bool
+    accuracy_threshold: float
+    grill_attempts: int
+    grill_correct: int
+    grill_accuracy: float | None
+    objectives: tuple[MasteryObjective, ...]
+    criteria: tuple[MasteryCriterion, ...]
+    is_estimate: bool = True
+    note: str = (
+        "Internal study exit gate derived from committed evidence; "
+        "not an AWS score prediction or exam-readiness guarantee."
+    )

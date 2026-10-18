@@ -149,10 +149,14 @@ class ScoredSessionService:
         return capacity, excluded
 
     def _question_domains(self) -> dict[str, set[int]]:
+        # Scored sessions use only authored questions — those with per-option
+        # rationales. Placeholder scaffolding (no rationales) is excluded so a
+        # scored session is always real content.
         rows = self._conn.execute(
             "SELECT q.question_id AS qid, qo.objective_id AS oid "
             "FROM questions q JOIN question_objectives qo ON qo.question_id = q.question_id "
-            "WHERE q.review_status = 'reviewed'"
+            "WHERE q.review_status = 'reviewed' "
+            "AND EXISTS (SELECT 1 FROM option_rationales r WHERE r.question_id = q.question_id)"
         ).fetchall()
         result: dict[str, set[int]] = {}
         for row in rows:

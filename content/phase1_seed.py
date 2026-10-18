@@ -14,6 +14,7 @@ from study_core.common import ALL_TASK_IDS
 
 from content.aip_c01 import build_seed_prompts
 from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
+from content.labs import build_authored_labs, build_lab_curriculum_items
 
 # Objectives that have real authored questions; their generic placeholders are
 # suppressed so the grill serves the genuine Domain 1 items.
@@ -113,66 +114,14 @@ def build_curriculum() -> list[dict[str, Any]]:
                 "content_ref": f"content-{task_id}",
             }
         )
-    items.append(
-        {
-            "item_id": "lab-01-model-comparison",
-            "item_type": "lab",
-            "title": "Lab 1: Bedrock model comparison",
-            "display_order": len(ALL_TASK_IDS) + 1,
-            "objective_ids": ["AIP-1.1", "AIP-1.2", "AIP-2.2", "AIP-4.1"],
-            "prerequisites": ["lesson-AIP-1.2"],
-            "content_ref": "lab-01-model-comparison",
-        }
-    )
+    items.extend(build_lab_curriculum_items(start_order=len(ALL_TASK_IDS) + 1))
     return items
 
 
 def build_lab_definitions() -> list[dict[str, Any]]:
-    """Return one fully-formed sample lab (Lab 1) for the Phase 2 lab workflow.
+    """Return the authored hands-on labs (1-4) for the lab workflow.
 
-    Phases 3-7 author the remaining labs; Phase 2 only needs a working lifecycle.
+    Lab content is authored in ``content/labs.py``; this adapter keeps the
+    ingestion call site stable. Later phases append labs 5-12.
     """
-    return [
-        {
-            "lab_id": "lab-01-model-comparison",
-            "title": "Lab 1: Bedrock model comparison",
-            "objective_ids": ["AIP-1.1", "AIP-1.2", "AIP-2.2", "AIP-4.1"],
-            "cost_class": "low",
-            "regions": ["us-east-1"],
-            "architecture": (
-                "Invoke multiple Bedrock foundation models and compare quality, "
-                "latency, and cost for one representative prompt."
-            ),
-            "cleanup": "No persistent resources are created; confirm none remain.",
-            "steps": [
-                {
-                    "step_id": "s1",
-                    "display_order": 1,
-                    "instruction": "Open the Bedrock console and confirm model access.",
-                    "prediction_prompt": "Which models will appear for your account/region?",
-                    "mandatory": True,
-                },
-                {
-                    "step_id": "s2",
-                    "display_order": 2,
-                    "instruction": "Invoke two models with the same prompt and record results.",
-                    "prediction_prompt": "Predict which model is faster and which is cheaper.",
-                    "mandatory": True,
-                },
-            ],
-            "checkpoints": [
-                {
-                    "checkpoint_id": "c1-model-access",
-                    "validator_id": "bedrock-models-present",
-                    "is_cleanup": False,
-                    "mandatory": True,
-                },
-                {
-                    "checkpoint_id": "c2-comparison-recorded",
-                    "validator_id": None,
-                    "is_cleanup": False,
-                    "mandatory": False,
-                },
-            ],
-        }
-    ]
+    return build_authored_labs()

@@ -463,6 +463,15 @@ Exit gate:
 - At least 80% accuracy on fresh Domain 1 scenarios after a delayed review.
 - Learner can explain retrieval failures and model-selection trade-offs without prompts.
 
+Status: Implemented. The exit gate is enforced by the `MasteryEvaluator`
+(`study_core/mastery.py`) and surfaced in the Progress view. It evaluates, from
+committed evidence, these criteria for Domain 1: every objective practiced
+(coverage), grill accuracy >= 80% (threshold exposed), no open misconceptions,
+at least one Domain 1 lab completed (independent vs. assisted shown), and an
+informational latest-scored-session accuracy. The result is labeled a
+transparent internal study gate, not an AWS score prediction. Question bank:
+24 authored Domain 1 questions (4 per task); Labs 1-4 authored.
+
 ### Phase 4 — Domain 2 mastery: agents, APIs, deployment, and enterprise integration
 
 **Goal:** Build production integration competence rather than isolated prompt demos.
@@ -571,8 +580,25 @@ Potential additions:
 - Screenshot-assisted checkpoint evidence.
 - Local question-drafting pipeline with independent review.
 - Calendar integration and forecasted readiness date.
+- **Multi-subject support.** Generalize the platform from a single AIP-C01 blueprint to multiple study subjects (other certifications or topics).
 
 These are not MVP requirements and must not delay hands-on study.
+
+#### Multi-subject support — assessment and migration path
+
+The study loop itself (grill, scored session, review, labs, scoring, state machines, persistence) is subject-agnostic and portable. Two deliberate single-subject lock-ins would need to become per-subject configuration before a second subject can be added cleanly:
+
+1. **`study_core/common.py: TASK_ID_PATTERN = r"^AIP-([1-5])\.([1-9])$"`** — hardcodes the AIP objective ID shape (5 domains, 9 tasks max). This must become a per-subject validator derived from the subject's blueprint, not a module-level constant.
+2. **The global blueprint constants in `study_core/common.py`** — `DOMAIN_WEIGHTS`, `_DOMAIN_TASK_COUNTS`, and `ALL_TASK_IDS` encode the AIP-C01 domain weighting (31/26/20/12/11) and objective inventory. These must move behind a `Subject`/`Blueprint` entity rather than living as AWS-specific module globals.
+
+Migration path when a measured need arises:
+
+- Promote **subject/blueprint to a first-class entity** (table + Pydantic model) carrying its own ID, domain weights, objective inventory, and ID pattern.
+- Make `TASK_ID_PATTERN` and `DOMAIN_WEIGHTS` **per-subject configuration** resolved from the active subject rather than imported constants.
+- Extend the existing `blueprint_version` column toward a `subject_id` foreign key so objectives, questions, attempts, sessions, and labs are scoped to a subject.
+- Keep subject facts in `content/` and configuration — never as constants inside `study_core`, preserving the inward dependency rule.
+
+No code changes are made now; this records the shape of the work so the current AWS-specific constants are a known, contained boundary rather than a scattered assumption.
 
 ## 7. Required hands-on lab matrix
 

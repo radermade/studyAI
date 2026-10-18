@@ -21,6 +21,7 @@ from study_core.lab_models import (
 # validator_id -> (service, read-only action). Actions are Describe/List/Get only.
 VALIDATOR_ALLOWLIST: dict[str, tuple[str, str]] = {
     "bedrock-models-present": ("bedrock", "list_foundation_models"),
+    "s3-bucket-present": ("s3", "list_buckets"),
     "s3-bucket-absent": ("s3", "list_buckets"),
     "lambda-function-present": ("lambda", "list_functions"),
 }
@@ -80,7 +81,7 @@ def _interpret_presence(validator_id: str, response: dict[str, Any]) -> bool:
     """Map a read-only response to a presence boolean without storing payloads."""
     if validator_id == "bedrock-models-present":
         return bool(response.get("modelSummaries"))
-    if validator_id == "s3-bucket-absent":
+    if validator_id in ("s3-bucket-present", "s3-bucket-absent"):
         return bool(response.get("Buckets"))
     if validator_id == "lambda-function-present":
         return bool(response.get("Functions"))
