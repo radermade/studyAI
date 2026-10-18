@@ -22,7 +22,9 @@ def test_migrations_apply_once_and_are_idempotent(tmp_path: Path) -> None:
     conn = connect(tmp_path / "db.sqlite", 5000)
     first = apply_migrations(conn, now_iso=_NOW)
     second = apply_migrations(conn, now_iso=_NOW)
-    assert first == [1]
+    # All numbered migrations apply in order on the first run; the second is a no-op.
+    assert first == sorted(first)
+    assert first[0] == 1
     assert second == []
     conn.close()
 

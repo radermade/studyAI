@@ -14,6 +14,8 @@ from content.aip_c01 import BLUEPRINT_VERSION
 from content.phase1_seed import (
     build_answer_material,
     build_content_units,
+    build_curriculum,
+    build_lab_definitions,
     build_question_options,
 )
 from study_core.common import utc_now
@@ -46,6 +48,8 @@ def command_ingest() -> int:
             answer_material=build_answer_material(),
             question_options=build_question_options(),
             content_units=build_content_units(),
+            curriculum=build_curriculum(),
+            labs=build_lab_definitions(),
         )
     finally:
         conn.close()

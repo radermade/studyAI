@@ -25,6 +25,8 @@ def ingest_handoff(
     answer_material: Mapping[str, Mapping[str, Any]] | None = None,
     question_options: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     content_units: Sequence[Mapping[str, Any]] | None = None,
+    curriculum: Sequence[Mapping[str, Any]] | None = None,
+    labs: Sequence[Mapping[str, Any]] | None = None,
 ) -> None:
     """Ingest an accepted Phase 0 handoff into the database idempotently.
 
@@ -58,6 +60,8 @@ def ingest_handoff(
         _ingest_baseline(conn, baseline, now_iso)
         _ingest_questions(conn, seed, now_iso, answer_material or {}, question_options or {})
         _ingest_content(conn, content_units or (), now_iso)
+        _ingest_curriculum(conn, curriculum or ())
+        _ingest_labs(conn, labs or ())
 
 
 def _ingest_domains(
@@ -248,3 +252,63 @@ def _ingest_content(
                 str(unit["freshness"]),
             ),
         )
+
+
+def _ingest_curriculum(conn: sqlite3.Connection, items: Sequence[Mapping[str, Any]]) -> None:
+    for item in items:
+        conn.execute(
+            "INSERT OR IGNORE INTO curriculum_items (item_id, item_type, title, display_order, "
+            "objective_ids, prerequisites, content_ref) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(item["item_id"]),
+                str(item["item_type"]),
+                str(item["title"]),
+                int(item["display_order"]),
+                json.dumps(list(item["objective_ids"])),
+                json.dumps(list(item["prerequisites"])),
+                item.get("content_ref"),
+            ),
+        )
+
+
+def _ingest_labs(conn: sqlite3.Connection, labs: Sequence[Mapping[str, Any]]) -> None:
+    for lab in labs:
+        lab_id = str(lab["lab_id"])
+        conn.execute(
+            "INSERT OR IGNORE INTO lab_definitions (lab_id, title, objective_ids, cost_class, "
+            "regions, architecture, cleanup) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                lab_id,
+                str(lab["title"]),
+                json.dumps(list(lab["objective_ids"])),
+                str(lab["cost_class"]),
+                json.dumps(list(lab["regions"])),
+                str(lab["architecture"]),
+                str(lab["cleanup"]),
+            ),
+        )
+        for step in lab.get("steps", ()):
+            conn.execute(
+                "INSERT OR IGNORE INTO lab_steps (lab_id, step_id, display_order, instruction, "
+                "prediction_prompt, mandatory) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    lab_id,
+                    str(step["step_id"]),
+                    int(step["display_order"]),
+                    str(step["instruction"]),
+                    str(step["prediction_prompt"]),
+                    1 if step["mandatory"] else 0,
+                ),
+            )
+        for checkpoint in lab.get("checkpoints", ()):
+            conn.execute(
+                "INSERT OR IGNORE INTO lab_checkpoints (lab_id, checkpoint_id, validator_id, "
+                "is_cleanup, mandatory) VALUES (?, ?, ?, ?, ?)",
+                (
+                    lab_id,
+                    str(checkpoint["checkpoint_id"]),
+                    checkpoint.get("validator_id"),
+                    1 if checkpoint["is_cleanup"] else 0,
+                    1 if checkpoint["mandatory"] else 0,
+                ),
+            )

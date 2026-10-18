@@ -64,3 +64,83 @@ def build_content_units() -> list[dict[str, Any]]:
             }
         )
     return units
+
+
+def build_curriculum() -> list[dict[str, Any]]:
+    """Return curriculum items: one lesson per objective plus one sample lab."""
+    items: list[dict[str, Any]] = []
+    for order, task_id in enumerate(ALL_TASK_IDS, start=1):
+        items.append(
+            {
+                "item_id": f"lesson-{task_id}",
+                "item_type": "lesson",
+                "title": f"Lesson: {task_id}",
+                "display_order": order,
+                "objective_ids": [task_id],
+                "prerequisites": [],
+                "content_ref": f"content-{task_id}",
+            }
+        )
+    items.append(
+        {
+            "item_id": "lab-01-model-comparison",
+            "item_type": "lab",
+            "title": "Lab 1: Bedrock model comparison",
+            "display_order": len(ALL_TASK_IDS) + 1,
+            "objective_ids": ["AIP-1.1", "AIP-1.2", "AIP-2.2", "AIP-4.1"],
+            "prerequisites": ["lesson-AIP-1.2"],
+            "content_ref": "lab-01-model-comparison",
+        }
+    )
+    return items
+
+
+def build_lab_definitions() -> list[dict[str, Any]]:
+    """Return one fully-formed sample lab (Lab 1) for the Phase 2 lab workflow.
+
+    Phases 3-7 author the remaining labs; Phase 2 only needs a working lifecycle.
+    """
+    return [
+        {
+            "lab_id": "lab-01-model-comparison",
+            "title": "Lab 1: Bedrock model comparison",
+            "objective_ids": ["AIP-1.1", "AIP-1.2", "AIP-2.2", "AIP-4.1"],
+            "cost_class": "low",
+            "regions": ["us-east-1"],
+            "architecture": (
+                "Invoke multiple Bedrock foundation models and compare quality, "
+                "latency, and cost for one representative prompt."
+            ),
+            "cleanup": "No persistent resources are created; confirm none remain.",
+            "steps": [
+                {
+                    "step_id": "s1",
+                    "display_order": 1,
+                    "instruction": "Open the Bedrock console and confirm model access.",
+                    "prediction_prompt": "Which models will appear for your account/region?",
+                    "mandatory": True,
+                },
+                {
+                    "step_id": "s2",
+                    "display_order": 2,
+                    "instruction": "Invoke two models with the same prompt and record results.",
+                    "prediction_prompt": "Predict which model is faster and which is cheaper.",
+                    "mandatory": True,
+                },
+            ],
+            "checkpoints": [
+                {
+                    "checkpoint_id": "c1-model-access",
+                    "validator_id": "bedrock-models-present",
+                    "is_cleanup": False,
+                    "mandatory": True,
+                },
+                {
+                    "checkpoint_id": "c2-comparison-recorded",
+                    "validator_id": None,
+                    "is_cleanup": False,
+                    "mandatory": False,
+                },
+            ],
+        }
+    ]

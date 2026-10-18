@@ -65,3 +65,38 @@ The server speaks JSON-RPC over stdio and exposes exactly: `start_session`,
 `next_question`, `grade_and_record`, `get_due_reviews`, `get_progress`, and
 `search_local_material`. No SQL, filesystem, shell, or AWS capability is exposed, and
 unanswered questions never carry answer keys or rubrics.
+
+## Phase 2 — Learning Workspace (the UI)
+
+Phase 2 is the original Streamlit workspace with eight views (Today, Learn, Grill, Labs,
+Review, Mock, Knowledge, Progress), a durable lab lifecycle, and read-only AWS lab
+validation.
+
+### 1. Ingest data (once)
+
+```bash
+uv run python -m scripts.phase1 ingest
+```
+
+### 2. Launch the workspace
+
+```bash
+uv run streamlit run app/main.py
+```
+
+Open the printed `Local URL` (default http://localhost:8501). What you can do:
+
+- **Learn:** pick a lesson, read the concept block, take notes, mark complete.
+- **Grill:** start a session and answer one question at a time with confidence; grading,
+  misconceptions, and spaced reviews persist through `study_core`.
+- **Knowledge:** full-text search local sources, filter by objective.
+- **Progress:** evidence-based, per-objective view (labeled an internal estimate).
+- **Review:** committed due reviews.
+- **Labs:** start the sample Bedrock lab, open the AWS Console in a new tab, run a
+  read-only validator check, use the progressive hint ladder, and complete the lab.
+  `Verified` requires validator evidence; `Cleaned up` requires proven absence — a click
+  never establishes either.
+
+Labs use read-only AWS validators (`study_aws`) via a named profile or the standard
+credential chain. If AWS is unconfigured, lab checks show an explicit unavailable state
+and every other view still works offline. Mock is a labeled placeholder until Phase 8.
