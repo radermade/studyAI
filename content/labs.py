@@ -1667,6 +1667,295 @@ _LAB_10: dict[str, Any] = {
 }
 
 
+# --- Lab 11: Evaluation and release gate -----------------------------------
+
+_LAB_11: dict[str, Any] = {
+    "lab_id": "lab-11-evaluation-release-gate",
+    "title": "Lab 11: Evaluation and release gate",
+    "objective_ids": ["AIP-5.1", "AIP-1.6", "AIP-3.4"],
+    "cost_class": "low",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will build a golden evaluation dataset with deterministic metrics "
+        "and a calibrated model-based judge, then wire it into a release gate "
+        "that blocks a change unless it meets the quality bar. You end with a "
+        "go/no-go deployment decision backed by measured evidence."
+    ),
+    "architecture": (
+        "Candidate changes run against a golden dataset. Deterministic metrics "
+        "score exact outputs; a calibrated judge scores open-ended ones. A "
+        "release gate promotes only when the quality bar is met and documents "
+        "the decision."
+    ),
+    "prerequisites": (
+        "Bedrock access in us-east-1; a golden set with expected answers; a "
+        "small human-labeled subset to calibrate the judge."
+    ),
+    "objectives_text": (
+        "Evaluate with golden data, metrics, and a calibrated judge (AIP-5.1), "
+        "gate prompt/model changes (AIP-1.6), and document the decision "
+        "transparently (AIP-3.4)."
+    ),
+    "region_note": "Low cost (evaluation calls). Stay in us-east-1.",
+    "recall_prompt": (
+        "What two kinds of metric did you use, and how did you know the judge " "could be trusted?"
+    ),
+    "cleanup": (
+        "This lab makes on-demand evaluation calls and creates no persistent "
+        "resources. Confirm no saved evaluation job or endpoint remains."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Assemble a golden dataset: representative inputs with expected "
+                "answers or acceptance criteria, including edge cases. Define "
+                "the quality bar the release must meet."
+            ),
+            "prediction_prompt": (
+                "Predict which category of input your current system is weakest " "on."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the golden set representative and large enough to be "
+                "meaningful? Note any coverage gap."
+            ),
+            "hints": [
+                "An evaluation is only as trustworthy as its golden set.",
+                "Include edge cases, not just easy, typical inputs.",
+                "State the quality bar as a number before measuring.",
+                "Build a representative golden set with expected answers and edge "
+                "cases, and commit to an explicit quality bar up front.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Score the system: deterministic metrics for exactly-checkable "
+                "outputs, and a model-based judge for open-ended ones. Calibrate "
+                "the judge against your human-labeled subset and record "
+                "agreement."
+            ),
+            "prediction_prompt": (
+                "Predict how well the model judge will agree with your human " "labels."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the judge's agreement with humans high enough to trust? "
+                "Note the agreement you measured."
+            ),
+            "hints": [
+                "Use exact checks where answers are exact; a judge only where "
+                "judgment is needed.",
+                "Calibrate the judge against human labels before trusting it.",
+                "Record judge-human agreement as a number.",
+                "Score exact outputs deterministically and open-ended ones with a "
+                "judge you first calibrated against human labels (measured "
+                "agreement). An uncalibrated judge is not trustworthy.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Wire a release gate: a candidate change is promoted only if it "
+                "meets or exceeds the quality bar on the golden set with no "
+                "regression. Make a documented go/no-go decision for one change."
+            ),
+            "prediction_prompt": (
+                "Predict whether your candidate change clears the bar without "
+                "regressing any case."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did the gate make the decision objective rather than a judgment "
+                "call? Note the evidence behind go/no-go."
+            ),
+            "hints": [
+                "A release gate turns 'seems fine' into a measured pass/fail.",
+                "Promote only on meeting the bar with no regression.",
+                "Document the metrics behind the decision.",
+                "Gate on the golden-set result: promote only if the bar is met "
+                "with no regression, and write a go/no-go decision citing the "
+                "numbers.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-golden-set-defined",
+            "label": "Golden set and quality bar defined",
+            "step_id": "s1",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-judge-calibrated",
+            "label": "Metrics applied and judge calibrated",
+            "step_id": "s2",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-release-decision",
+            "label": "Documented go/no-go release decision",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+    ],
+}
+
+# --- Lab 12: Multi-fault troubleshooting challenge -------------------------
+
+_LAB_12: dict[str, Any] = {
+    "lab_id": "lab-12-multifault-troubleshooting",
+    "title": "Lab 12: Multi-fault troubleshooting challenge",
+    "objective_ids": ["AIP-5.2", "AIP-4.3"],
+    "cost_class": "low",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "A broken GenAI pipeline hides several independent faults across the "
+        "prompt, context assembly, retrieval, IAM/API access, output schema, "
+        "and latency. You will diagnose each from evidence, record rejected "
+        "hypotheses, and apply the narrowest justified remediation for each, "
+        "validating recovery."
+    ),
+    "architecture": (
+        "A request flows through prompt construction, context/retrieval, a "
+        "permissioned API/model call, and schema validation. Faults are seeded "
+        "at multiple layers; traces and logs localize each one."
+    ),
+    "prerequisites": (
+        "Bedrock access in us-east-1; a pipeline (or the lab's seeded one) with "
+        "logs/traces enabled; the faults from Labs 6/7/9 patterns to recognize."
+    ),
+    "objectives_text": (
+        "Systematically troubleshoot multiple faults from evidence (AIP-5.2) "
+        "while keeping cost in mind for remediations (AIP-4.3)."
+    ),
+    "region_note": "Low cost. Stay in us-east-1; remediations must not over-provision.",
+    "recall_prompt": (
+        "List the fault layers you found and, for one, the evidence that pointed "
+        "to it over a plausible alternative."
+    ),
+    "cleanup": (
+        "Revert any temporary diagnostic changes. This lab creates no new "
+        "persistent resources beyond those reused from earlier labs; confirm "
+        "none were left behind."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Reproduce the broken behavior and triage: list the observable "
+                "symptoms (wrong answers, errors, slowness) and map each to the "
+                "layer it most likely originates from."
+            ),
+            "prediction_prompt": (
+                "Predict how many independent faults you expect, and which layer "
+                "hides the subtlest one."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did symptoms cleanly map to layers, or did one symptom have "
+                "multiple candidate causes? Note the ambiguity."
+            ),
+            "hints": [
+                "Multiple faults can masquerade as one symptom; triage before " "fixing.",
+                "Map symptoms to layers: prompt, context, retrieval, IAM/API, " "schema, latency.",
+                "Reproduce reliably before forming hypotheses.",
+                "Reproduce the failure and build a symptom-to-layer map. Expect "
+                "several independent faults; do not assume one fix explains "
+                "everything.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Diagnose each fault from evidence (logs, traces, retrieved "
+                "context, IAM errors, schema-validation failures). For each, "
+                "record the evidence and the hypotheses you rejected."
+            ),
+            "prediction_prompt": (
+                "Predict which fault will be easiest to confuse with a different " "cause."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "For each fault, did the evidence uniquely point to the cause? "
+                "Capture rejected hypotheses, not just the answer."
+            ),
+            "hints": [
+                "Evidence first; a cause you cannot show in logs/traces is a " "guess.",
+                "An IAM/API fault shows as authorization errors; a schema fault "
+                "as validation failures.",
+                "Write down what you ruled out and why.",
+                "For each layer, cite the specific evidence (trace, log line, "
+                "retrieved passage, IAM denial, schema error) and list the "
+                "hypotheses the evidence ruled out.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Apply the narrowest justified remediation for each fault, avoid "
+                "over-provisioning or broad rewrites, then re-run the "
+                "reproduction and confirm every symptom is resolved."
+            ),
+            "prediction_prompt": ("Predict whether fixing one fault will reveal or mask another."),
+            "mandatory": True,
+            "reflection": (
+                "Did each remediation address exactly its fault, and did "
+                "re-running prove full recovery? Note any residual issue."
+            ),
+            "hints": [
+                "The narrowest fix that resolves the cause is the right one.",
+                "Avoid over-provisioning for a latency fault that trimming or "
+                "caching would solve more cheaply.",
+                "Re-run the full reproduction to confirm recovery.",
+                "Remediate each fault minimally, prefer the cheaper fix where "
+                "quality holds, then re-run the reproduction and confirm every "
+                "symptom is gone.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-faults-triaged",
+            "label": "Symptoms reproduced and mapped to layers",
+            "step_id": "s1",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-faults-diagnosed",
+            "label": "Each fault diagnosed from evidence",
+            "step_id": "s2",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-recovery-validated",
+            "label": "Narrow remediations applied and recovery validated",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+    ],
+}
+
+
 _AUTHORED_LABS: tuple[dict[str, Any], ...] = (
     _LAB_1,
     _LAB_2,
@@ -1678,6 +1967,8 @@ _AUTHORED_LABS: tuple[dict[str, Any], ...] = (
     _LAB_8,
     _LAB_9,
     _LAB_10,
+    _LAB_11,
+    _LAB_12,
 )
 
 

@@ -376,3 +376,33 @@ def test_domain4_gate_passes_with_full_evidence(connection: DbConnection, clock:
     assert by_key["accuracy"].met is True
     assert by_key["hands_on"].met is True
     assert gate.passed is True
+
+
+_DOMAIN5_OBJECTIVES = ("AIP-5.1", "AIP-5.2")
+
+
+def test_domain5_gate_passes_with_full_evidence(connection: DbConnection, clock: FakeClock) -> None:
+    at = clock.now_utc().isoformat()
+    for objective in _DOMAIN5_OBJECTIVES:
+        qid = _one_question_for(connection, objective)
+        _seed_attempt(connection, learner_id="L5", question_id=qid, outcome="correct", at_iso=at)
+    # Lab 11 is a self-report-only Domain 5 lab (evaluation reasoning).
+    labs = LabService(connection, clock, _PresenceThenAbsence())
+    run = labs.start_lab(
+        learner_id="L5",
+        lab_id="lab-11-evaluation-release-gate",
+        region="us-east-1",
+        request_id="start-d5",
+        acknowledged_cost=True,
+        acknowledged_cleanup=True,
+    )
+    for cid in ("c1-golden-set-defined", "c2-judge-calibrated", "c3-release-decision"):
+        labs.record_self_report(run_id=run.run_id, checkpoint_id=cid, event_id=f"sr-{cid}")
+    labs.complete_lab(run_id=run.run_id, request_id="done-d5")
+
+    gate = _evaluator(connection, clock).evaluate(learner_id="L5", domain_id=5)
+    by_key = {c.key: c for c in gate.criteria}
+    assert by_key["coverage"].met is True
+    assert by_key["accuracy"].met is True
+    assert by_key["hands_on"].met is True
+    assert gate.passed is True

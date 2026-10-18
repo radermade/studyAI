@@ -580,6 +580,20 @@ Exit gate:
 - Learner isolates every Lab 12 fault and proposes the narrowest justified remediation.
 - At least 80% accuracy on fresh Domain 5 scenarios.
 
+Status: Implemented. 8 authored Domain 5 questions (4 per task, AIP-5.1-5.2)
+cover evaluation (golden datasets, deterministic vs. judge metrics, judge
+calibration, release gates) and troubleshooting (variable isolation, retrieval
+vs. generation, reproduce-before-fix, validate-recovery). Labs 11 (evaluation +
+release gate with a documented go/no-go) and 12 (hidden multi-fault
+troubleshooting across prompt/context/retrieval/IAM/schema/latency) are
+authored as data-driven walkthroughs. The per-domain `MasteryEvaluator`
+enforces the Domain 5 exit gate, surfaced in the Progress view.
+
+**Milestone:** With all five domains authored (80 questions, 12 labs, 20/20
+objectives covered), a scored session now draws the full exam structure — 65
+scored + 10 unscored = 75 questions, full_length=True, no excluded domains —
+entirely from authored content.
+
 ### Phase 8 — Exam simulation and readiness closure
 
 **Goal:** Convert domain knowledge into reliable timed scenario performance and make a

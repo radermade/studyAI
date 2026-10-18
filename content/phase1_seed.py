@@ -17,6 +17,7 @@ from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
 from content.domain2_questions import QUESTIONS as DOMAIN2_QUESTIONS
 from content.domain3_questions import QUESTIONS as DOMAIN3_QUESTIONS
 from content.domain4_questions import QUESTIONS as DOMAIN4_QUESTIONS
+from content.domain5_questions import QUESTIONS as DOMAIN5_QUESTIONS
 from content.labs import build_authored_labs, build_lab_curriculum_items
 
 # All authored (non-placeholder) scenario questions across completed domains.
@@ -25,6 +26,7 @@ _AUTHORED_QUESTIONS: list[dict[str, Any]] = [
     *DOMAIN2_QUESTIONS,
     *DOMAIN3_QUESTIONS,
     *DOMAIN4_QUESTIONS,
+    *DOMAIN5_QUESTIONS,
 ]
 
 # Objectives with genuine authored coverage: an objective counts as authored

@@ -11,7 +11,7 @@ from app.theme import StatusTone
 
 # Domains with authored content and an enforceable exit gate. The gate is
 # per-domain and extensible; domains are added here as their content lands.
-_EVALUATED_DOMAINS: tuple[int, ...] = (1, 2, 3, 4)
+_EVALUATED_DOMAINS: tuple[int, ...] = (1, 2, 3, 4, 5)
 
 
 def render(runtime: StudyRuntime, learner: str) -> None:
