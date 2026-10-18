@@ -39,3 +39,29 @@ uv run python -m scripts.phase0 evaluate
 
 Runtime state (handoff artifacts, baseline responses) is written under `data/` and is
 gitignored. Authored manifests and content live under `content/` and `labs/`.
+
+## Phase 1 — Local Study Core
+
+Phase 1 is the durable, transport-independent study engine over SQLite plus a narrow
+local stdio MCP server exposing six study tools.
+
+### Ingest Phase 0 handoff and seed content into the study database
+
+```bash
+uv run python -m scripts.phase1 ingest
+```
+
+This builds the accepted Phase 0 handoff in memory, applies migrations, and ingests the
+blueprint, sources, profile, safety policy, baseline, seed questions (with private answer
+material), and searchable content into `data/study.db`.
+
+### Run the local MCP study server
+
+```bash
+uv run python -m study_mcp.server
+```
+
+The server speaks JSON-RPC over stdio and exposes exactly: `start_session`,
+`next_question`, `grade_and_record`, `get_due_reviews`, `get_progress`, and
+`search_local_material`. No SQL, filesystem, shell, or AWS capability is exposed, and
+unanswered questions never carry answer keys or rubrics.

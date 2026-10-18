@@ -1,0 +1,41 @@
+"""Wire settings, connection, migrations, and the study service together."""
+
+from __future__ import annotations
+
+import sqlite3
+from dataclasses import dataclass
+
+from study_core.db import apply_migrations, connect
+from study_core.ports import Clock, RandomSource, SequenceRandom, SystemClock
+from study_core.service import StudyService
+from study_core.settings import Settings
+
+
+@dataclass
+class StudyRuntime:
+    """A ready-to-use connection plus the study service built over it."""
+
+    connection: sqlite3.Connection
+    service: StudyService
+
+
+def build_runtime(
+    settings: Settings,
+    *,
+    blueprint_version: str,
+    clock: Clock | None = None,
+    random_source: RandomSource | None = None,
+) -> StudyRuntime:
+    """Open the database, apply migrations, and build the study service."""
+    resolved_clock = clock if clock is not None else SystemClock()
+    resolved_random = random_source if random_source is not None else SequenceRandom()
+    conn = connect(settings.database_path, settings.busy_timeout_ms)
+    apply_migrations(conn, now_iso=resolved_clock.now_utc().isoformat())
+    service = StudyService(
+        conn,
+        resolved_clock,
+        resolved_random,
+        blueprint_version=blueprint_version,
+        max_search_limit=settings.max_search_limit,
+    )
+    return StudyRuntime(connection=conn, service=service)

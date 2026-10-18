@@ -1,0 +1,250 @@
+"""Transactional ingestion of the Phase 0 handoff and seed content into SQLite.
+
+Ingestion validates the handoff envelope, then writes blueprint, objectives,
+sources, profile, safety, baseline, questions, and the FTS index. Public
+question data and private answer material are written to separate tables.
+Re-ingesting an identical blueprint version is idempotent.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+from study_core.artifacts import ArtifactEnvelope
+from study_core.db import immediate_transaction
+
+
+def ingest_handoff(
+    conn: sqlite3.Connection,
+    handoff: ArtifactEnvelope,
+    *,
+    now_iso: str,
+    answer_material: Mapping[str, Mapping[str, Any]] | None = None,
+    question_options: Mapping[str, Sequence[tuple[str, str]]] | None = None,
+    content_units: Sequence[Mapping[str, Any]] | None = None,
+) -> None:
+    """Ingest an accepted Phase 0 handoff into the database idempotently.
+
+    Args:
+        conn: an open connection with foreign keys enabled.
+        handoff: the verified Phase0Handoff envelope.
+        now_iso: UTC ISO timestamp for provenance fields.
+        answer_material: optional map of question_id -> {correct_option_ids,
+            rubric}. Private grading material lives only in `answer_material`.
+    """
+    handoff.verify()
+    payload = handoff.payload
+    blueprint_version = str(payload["blueprint_version"])
+    manifest = payload["manifest"]
+    registry = payload["source_registry"]
+    profile = payload["learner_profile"]
+    safety = payload["lab_safety_policy"]
+    baseline = payload["baseline_summary"]
+    seed = payload["seed_admission"]
+
+    with immediate_transaction(conn):
+        conn.execute(
+            "INSERT OR IGNORE INTO blueprints (blueprint_version, created_at) VALUES (?, ?)",
+            (blueprint_version, now_iso),
+        )
+        _ingest_domains(conn, manifest["domains"], blueprint_version)
+        _ingest_objectives(conn, manifest["objectives"], blueprint_version)
+        _ingest_sources(conn, registry["sources"], blueprint_version)
+        _ingest_profile(conn, profile, now_iso)
+        _ingest_safety(conn, safety, now_iso)
+        _ingest_baseline(conn, baseline, now_iso)
+        _ingest_questions(conn, seed, now_iso, answer_material or {}, question_options or {})
+        _ingest_content(conn, content_units or (), now_iso)
+
+
+def _ingest_domains(
+    conn: sqlite3.Connection, domains: Sequence[Mapping[str, Any]], version: str
+) -> None:
+    for domain in domains:
+        conn.execute(
+            "INSERT OR IGNORE INTO domains (domain_id, blueprint_version, title, weight_percent) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                int(domain["domain_id"]),
+                version,
+                str(domain["title"]),
+                int(domain["weight_percent"]),
+            ),
+        )
+
+
+def _ingest_objectives(
+    conn: sqlite3.Connection, objectives: Sequence[Mapping[str, Any]], version: str
+) -> None:
+    for objective in objectives:
+        conn.execute(
+            "INSERT OR IGNORE INTO objectives (objective_id, blueprint_version, domain_id, "
+            "title, status) VALUES (?, ?, ?, ?, ?)",
+            (
+                str(objective["objective_id"]),
+                version,
+                int(objective["domain_id"]),
+                str(objective["title"]),
+                str(objective["status"]),
+            ),
+        )
+
+
+def _ingest_sources(
+    conn: sqlite3.Connection, sources: Sequence[Mapping[str, Any]], version: str
+) -> None:
+    for source in sources:
+        conn.execute(
+            "INSERT OR IGNORE INTO sources (source_id, blueprint_version, url, title, "
+            "publisher, retrieved_at, source_type, freshness) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(source["source_id"]),
+                version,
+                str(source["url"]),
+                str(source["title"]),
+                str(source["publisher"]),
+                str(source["retrieved_at"]),
+                str(source["source_type"]),
+                str(source["freshness"]),
+            ),
+        )
+
+
+def _ingest_profile(conn: sqlite3.Connection, profile: Mapping[str, Any], now_iso: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO learner_profiles (learner_id, profile_version, weekly_hours, "
+        "experience, target_region, account_type, lab_budget_usd, exam_date, "
+        "exam_date_undecided, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            str(profile["learner_id"]),
+            str(profile["profile_version"]),
+            int(profile["weekly_hours"]),
+            str(profile["experience"]),
+            str(profile["target_region"]),
+            str(profile["account_type"]),
+            float(profile["lab_budget_usd"]),
+            profile.get("exam_date"),
+            1 if profile["exam_date_undecided"] else 0,
+            str(profile.get("updated_at", now_iso)),
+        ),
+    )
+
+
+def _ingest_safety(conn: sqlite3.Connection, safety: Mapping[str, Any], now_iso: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO safety_policies (policy_version, payload_json, ingested_at) "
+        "VALUES (?, ?, ?)",
+        (str(safety["policy_version"]), json.dumps(safety, sort_keys=True), now_iso),
+    )
+
+
+def _ingest_baseline(conn: sqlite3.Connection, baseline: Mapping[str, Any], now_iso: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO baseline_summaries (run_id, learner_id, complete, "
+        "answered_count, unanswered_count, mean_confidence, ingested_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            str(baseline["run_id"]),
+            str(baseline["learner_id"]),
+            1 if baseline["complete"] else 0,
+            int(baseline["answered_count"]),
+            int(baseline["unanswered_count"]),
+            float(baseline["mean_confidence"]),
+            now_iso,
+        ),
+    )
+
+
+def _ingest_questions(
+    conn: sqlite3.Connection,
+    seed: Sequence[Mapping[str, Any]],
+    now_iso: str,
+    answer_material: Mapping[str, Mapping[str, Any]],
+    question_options: Mapping[str, Sequence[tuple[str, str]]],
+) -> None:
+    for prompt in seed:
+        question_id = str(prompt["question_id"])
+        source_ids = list(prompt["source_ids"])
+        conn.execute(
+            "INSERT OR IGNORE INTO questions (question_id, prompt, scenario_constraint, "
+            "difficulty, question_format, source_ids, review_status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                question_id,
+                str(prompt["prompt"]),
+                str(prompt["scenario_constraint"]),
+                str(prompt["difficulty"]),
+                str(prompt["question_format"]),
+                json.dumps(source_ids),
+                str(prompt["review_status"]),
+                now_iso,
+            ),
+        )
+        for objective_id in prompt["objective_ids"]:
+            conn.execute(
+                "INSERT OR IGNORE INTO question_objectives (question_id, objective_id) "
+                "VALUES (?, ?)",
+                (question_id, str(objective_id)),
+            )
+        for option_id, text in question_options.get(question_id, ()):
+            conn.execute(
+                "INSERT OR IGNORE INTO question_options (question_id, option_id, text) "
+                "VALUES (?, ?, ?)",
+                (question_id, option_id, text),
+            )
+        material = answer_material.get(question_id)
+        if material is not None:
+            conn.execute(
+                "INSERT OR IGNORE INTO answer_material (question_id, correct_option_ids, rubric) "
+                "VALUES (?, ?, ?)",
+                (
+                    question_id,
+                    json.dumps(list(material["correct_option_ids"])),
+                    str(material["rubric"]),
+                ),
+            )
+
+
+def _ingest_content(
+    conn: sqlite3.Connection, content_units: Sequence[Mapping[str, Any]], now_iso: str
+) -> None:
+    for unit in content_units:
+        content_id = str(unit["content_id"])
+        objective_ids = list(unit["objective_ids"])
+        existing = conn.execute(
+            "SELECT 1 FROM content_units WHERE content_id = ?", (content_id,)
+        ).fetchone()
+        if existing is not None:
+            continue
+        conn.execute(
+            "INSERT INTO content_units (content_id, title, body, source_ids, freshness, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                content_id,
+                str(unit["title"]),
+                str(unit["body"]),
+                json.dumps(list(unit["source_ids"])),
+                str(unit["freshness"]),
+                now_iso,
+            ),
+        )
+        for objective_id in objective_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO content_objectives (content_id, objective_id) "
+                "VALUES (?, ?)",
+                (content_id, str(objective_id)),
+            )
+        conn.execute(
+            "INSERT INTO material_fts (content_id, title, body, objective_ids, freshness) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                content_id,
+                str(unit["title"]),
+                str(unit["body"]),
+                json.dumps(objective_ids),
+                str(unit["freshness"]),
+            ),
+        )

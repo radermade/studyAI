@@ -5,8 +5,10 @@ description = "Local-first AWS Certified Generative AI Developer (AIP-C01) study
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    # Pydantic v2 is the only runtime dependency required by Phase 0.
-    # It validates every artifact that crosses an ingestion boundary.
+    # Pydantic v2 validates every artifact/request that crosses a boundary.
+    # The narrow local stdio MCP server is implemented over the standard
+    # library (JSON-RPC over stdio) to keep the local-first footprint minimal
+    # and avoid a native cryptography toolchain the environment cannot build.
     "pydantic>=2.9,<3.0",
 ]
 
@@ -38,10 +40,12 @@ python_version = "3.12"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
-# Phase 0 ships study_core, content, scripts, and tests. Later phases add
-# study_mcp, study_aws, and app.
-files = ["study_core", "content", "scripts", "tests"]
+# Phase 0-1 ship study_core, study_mcp, content, scripts, and tests. Later
+# phases add study_aws and app.
+files = ["study_core", "study_mcp", "content", "scripts", "tests"]
 plugins = ["pydantic.mypy"]
+
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
