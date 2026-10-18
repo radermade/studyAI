@@ -622,6 +622,22 @@ Exit gate:
 - Required lab matrix is complete and cleanup is verified.
 - Official practice result and remaining risk are reviewed before scheduling or sitting the exam.
 
+Status: Implemented. A `ReadinessEvaluator` (`study_core/readiness.py`) rolls up
+committed evidence into one auditable whole-exam go/no-go, surfaced as the
+"Exam readiness" panel in the Progress view. Criteria: all five domain exit
+gates passed, latest FULL-LENGTH scored accuracy >= 85% (a non-full-length
+session does not qualify), no open misconceptions, and the complete 12-lab
+matrix (independent vs. assisted shown per lab). Per-domain scored results stay
+informational, consistent with compensatory scoring, and the roll-up is clearly
+labeled an internal estimate, pointing to the official AWS practice exam as the
+final external signal.
+
+Design note: the product's scored sessions are intentionally non-accumulating
+(each new session replaces the prior), so Phase 8's "two fresh mocks with
+non-overlapping items / session history" is realized as a readiness roll-up
+over the latest full-length result plus durable grill, misconception, and lab
+evidence, rather than by reintroducing stored session history.
+
 ### Phase 9 — Optional enhancements after demonstrated need
 
 Potential additions:

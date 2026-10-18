@@ -277,3 +277,45 @@ class DomainMasteryReport(StrictModel):
         "Internal study exit gate derived from committed evidence; "
         "not an AWS score prediction or exam-readiness guarantee."
     )
+
+
+class DomainGateSummary(StrictModel):
+    """Compact pass/fail summary of one domain's exit gate for the readiness roll-up."""
+
+    domain_id: int
+    passed: bool
+    grill_accuracy: float | None
+
+
+class LabMatrixEntry(StrictModel):
+    """Completion state of one authored lab for the required-lab matrix."""
+
+    lab_id: str
+    title: str
+    completed: bool
+    independent: bool
+
+
+class ReadinessReport(StrictModel):
+    """Whole-exam readiness roll-up across all five domains.
+
+    A transparent internal go/no-go derived from committed evidence: the five
+    domain exit gates, overall scored accuracy, misconception state, and the
+    required-lab matrix. It is never a prediction of the official AWS result.
+    """
+
+    learner_id: str
+    ready: bool
+    overall_threshold: float
+    scored_accuracy: float | None
+    scored_is_full_length: bool
+    open_misconceptions: int
+    domain_gates: tuple[DomainGateSummary, ...]
+    lab_matrix: tuple[LabMatrixEntry, ...]
+    criteria: tuple[MasteryCriterion, ...]
+    is_estimate: bool = True
+    note: str = (
+        "Internal readiness estimate from committed evidence; not a prediction "
+        "of the official AWS exam result. Complete the official practice exam "
+        "as the final external signal."
+    )

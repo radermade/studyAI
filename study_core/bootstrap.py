@@ -15,6 +15,7 @@ from study_core.ports import (
     SystemClock,
     SystemRandom,
 )
+from study_core.readiness import ReadinessEvaluator
 from study_core.scored_service import ScoredSessionService
 from study_core.service import StudyService
 from study_core.settings import Settings
@@ -31,6 +32,7 @@ class StudyRuntime:
     ui: UiStateService
     scored: ScoredSessionService
     mastery: MasteryEvaluator
+    readiness: ReadinessEvaluator
 
 
 def build_runtime(
@@ -68,6 +70,7 @@ def build_runtime(
     resolved_scored_random = scored_random if scored_random is not None else SystemRandom()
     scored = ScoredSessionService(conn, resolved_clock, resolved_scored_random)
     mastery = MasteryEvaluator(conn, resolved_clock, blueprint_version=blueprint_version)
+    readiness = ReadinessEvaluator(conn, resolved_clock, mastery)
     return StudyRuntime(
         connection=conn,
         service=service,
@@ -75,4 +78,5 @@ def build_runtime(
         ui=ui,
         scored=scored,
         mastery=mastery,
+        readiness=readiness,
     )
