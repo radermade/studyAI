@@ -550,6 +550,19 @@ Exit gate:
 - Learner can identify the bottleneck from evidence before selecting a remedy.
 - At least 80% accuracy on fresh Domain 4 scenarios.
 
+Status: Implemented. 12 authored Domain 4 questions (4 per task, AIP-4.1-4.3)
+cover operations/monitoring/incident response, performance optimization
+(caching, token reduction, concurrency, quality-floor protection), and cost
+optimization (routing, batch, attribution, provisioned vs. on-demand). Labs 9
+(observability + evidence-led incident response) and 10 (cost/performance
+benchmark with a before/after decision record that holds the quality
+threshold) are authored as data-driven walkthroughs. The per-domain
+`MasteryEvaluator` enforces the Domain 4 exit gate, surfaced in the Progress
+view. Note: a placeholder-suppression fix now treats an objective as authored
+only when it is the PRIMARY objective of an authored question, so a secondary
+tag (e.g. a Domain 4 question also tagged AIP-5.2) no longer suppresses an
+un-authored objective's grill placeholders.
+
 ### Phase 7 — Domain 5 mastery: evaluation and troubleshooting
 
 **Goal:** Validate and repair GenAI systems systematically.

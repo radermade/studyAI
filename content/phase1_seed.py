@@ -16,6 +16,7 @@ from content.aip_c01 import build_seed_prompts
 from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
 from content.domain2_questions import QUESTIONS as DOMAIN2_QUESTIONS
 from content.domain3_questions import QUESTIONS as DOMAIN3_QUESTIONS
+from content.domain4_questions import QUESTIONS as DOMAIN4_QUESTIONS
 from content.labs import build_authored_labs, build_lab_curriculum_items
 
 # All authored (non-placeholder) scenario questions across completed domains.
@@ -23,11 +24,14 @@ _AUTHORED_QUESTIONS: list[dict[str, Any]] = [
     *DOMAIN1_QUESTIONS,
     *DOMAIN2_QUESTIONS,
     *DOMAIN3_QUESTIONS,
+    *DOMAIN4_QUESTIONS,
 ]
 
-# Objectives that have real authored questions; their generic placeholders are
-# suppressed so the grill serves the genuine authored items for those objectives.
-_AUTHORED_OBJECTIVES = {obj for q in _AUTHORED_QUESTIONS for obj in q["objective_ids"]}
+# Objectives with genuine authored coverage: an objective counts as authored
+# only when it is the PRIMARY (first) objective of an authored question. A mere
+# secondary tag does not create real coverage, so a placeholder for an objective
+# that only ever appears as a secondary tag must NOT be suppressed.
+_AUTHORED_OBJECTIVES = {q["objective_ids"][0] for q in _AUTHORED_QUESTIONS}
 
 # Four generic options per placeholder question (option "a" is keyed-correct).
 # Placeholders remain only for objectives without authored content yet.

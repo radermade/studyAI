@@ -44,6 +44,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 "content/domain1_questions.py" = ["E501"]
 "content/domain2_questions.py" = ["E501"]
 "content/domain3_questions.py" = ["E501"]
+"content/domain4_questions.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

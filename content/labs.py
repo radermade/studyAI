@@ -1366,6 +1366,307 @@ _LAB_8: dict[str, Any] = {
 }
 
 
+# --- Lab 9: Observability and incident response ----------------------------
+
+_LAB_9: dict[str, Any] = {
+    "lab_id": "lab-09-observability-incident",
+    "title": "Lab 9: Observability and incident response",
+    "objective_ids": ["AIP-4.1", "AIP-2.5", "AIP-5.2"],
+    "cost_class": "low",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will instrument a GenAI Lambda with structured, sanitized logs and "
+        "traces, build a dashboard of latency/error/cost signals with an alarm, "
+        "then inject a fault and use the telemetry to diagnose root cause before "
+        "remediating."
+    ),
+    "architecture": (
+        "A Lambda calls a Bedrock model, emitting correlated, sanitized logs and "
+        "traces to CloudWatch/X-Ray. A dashboard surfaces latency, error rate, "
+        "and cost signals; an alarm fires on regression; traces drive diagnosis."
+    ),
+    "prerequisites": (
+        "Permission to create a Lambda, CloudWatch dashboard/alarm, and enable "
+        "tracing in us-east-1; Bedrock access."
+    ),
+    "objectives_text": (
+        "Operate with metrics, dashboards, and incident response (AIP-4.1), add "
+        "trace correlation and bounded handling (AIP-2.5), and diagnose from "
+        "evidence (AIP-5.2)."
+    ),
+    "region_note": "Low cost (logs, one alarm). Stay in us-east-1 and clean up.",
+    "recall_prompt": (
+        "What evidence did you use to find the root cause, and why did you "
+        "diagnose before changing anything?"
+    ),
+    "cleanup": (
+        "Delete the Lambda, the dashboard, and the alarm. Re-list functions to "
+        "confirm the Lambda is gone before marking cleanup verified."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Create a Lambda that calls a Bedrock model and emits structured "
+                "logs (correlation ID, latency, outcome) and a trace per "
+                "request. Redact prompts, responses, PII, and secrets."
+            ),
+            "prediction_prompt": (
+                "Predict which fields you must redact to keep logs safe yet " "useful."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did your logs stay useful after redaction? Note what you kept " "versus removed."
+            ),
+            "hints": [
+                "Observability needs correlated, structured signals, not raw " "payloads.",
+                "Use CloudWatch structured logging and enable X-Ray tracing on " "the function.",
+                "Log a correlation ID, latency, and outcome; never prompts, "
+                "responses, PII, or secrets.",
+                "Emit structured logs with a correlation ID, latency, and outcome "
+                "plus a per-request trace. Redact all sensitive content so the "
+                "telemetry is safe and still diagnostic.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Build a dashboard showing latency (p50/p99), error rate, "
+                "throughput, and estimated cost per request, and add an alarm "
+                "that fires when error rate or latency regresses."
+            ),
+            "prediction_prompt": (
+                "Predict which single signal would first reveal a bad " "deployment."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Would your alarm have caught a quality/latency regression "
+                "quickly? Note the threshold you chose."
+            ),
+            "hints": [
+                "You cannot run an incident response without baseline signals and " "an alarm.",
+                "CloudWatch dashboards and alarms cover latency, errors, and "
+                "custom cost metrics.",
+                "Alarm on error rate and p99 latency against a sensible " "threshold.",
+                "Build a dashboard of latency/error/throughput/cost and an alarm "
+                "on error-rate or p99 latency regression. This is what pages you "
+                "before users complain.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Inject a fault (e.g., force throttling or an error in the tool "
+                "call). Use the dashboard and traces to identify the root cause, "
+                "record rejected hypotheses, then apply the narrowest "
+                "remediation."
+            ),
+            "prediction_prompt": (
+                "Predict whether the dashboard or the trace will localize the " "fault faster."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did you diagnose from evidence before changing code? Capture "
+                "the trace references and the rejected hypotheses."
+            ),
+            "hints": [
+                "Diagnose before you remediate; evidence first, change second.",
+                "Correlate the alarm to the trace of a failing request via the " "correlation ID.",
+                "Record what you ruled out, not just the final cause.",
+                "Use the alarm + trace to localize the fault, write down rejected "
+                "hypotheses and the evidence, then make the smallest change that "
+                "fixes the root cause.",
+            ],
+        },
+        {
+            "step_id": "s4",
+            "display_order": 4,
+            "instruction": (
+                "Clean up: delete the Lambda, the dashboard, and the alarm. "
+                "Re-list functions to confirm the Lambda is gone."
+            ),
+            "prediction_prompt": ("Which resource keeps a small ongoing cost if left behind?"),
+            "mandatory": True,
+            "reflection": (
+                "Did you remove the function, dashboard, and alarm? Note any you " "nearly forgot."
+            ),
+            "hints": [
+                "A clicked delete is not proof; confirm absence.",
+                "Delete the alarm and dashboard, then the Lambda.",
+                "Alarms can linger and keep evaluating if not removed.",
+                "After deletion, re-list functions and confirm the Lambda is "
+                "absent. The cleanup checkpoint verifies only on observed "
+                "absence.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-instrumented-fn-present",
+            "label": "Instrumented function created",
+            "step_id": "s1",
+            "validator_id": "lambda-function-present",
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-incident-diagnosed",
+            "label": "Root cause diagnosed from telemetry",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-instrumented-fn-removed",
+            "label": "Instrumented function removed",
+            "step_id": "s4",
+            "validator_id": "lambda-function-absent",
+            "is_cleanup": True,
+            "mandatory": True,
+        },
+    ],
+}
+
+# --- Lab 10: Cost and performance optimization -----------------------------
+
+_LAB_10: dict[str, Any] = {
+    "lab_id": "lab-10-cost-performance",
+    "title": "Lab 10: Cost and performance optimization",
+    "objective_ids": ["AIP-4.2", "AIP-4.3", "AIP-1.2", "AIP-2.2"],
+    "cost_class": "low",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will benchmark a representative workload for quality, latency, and "
+        "cost, apply optimizations (prompt trimming, caching, model routing), "
+        "and prove with a before/after measurement that cost and latency "
+        "improved without dropping quality below an explicit threshold."
+    ),
+    "architecture": (
+        "A fixed benchmark set runs against a baseline configuration, then "
+        "against optimized configurations. Quality, latency, and cost are "
+        "measured each time; the chosen configuration must hold the quality "
+        "floor."
+    ),
+    "prerequisites": (
+        "Bedrock access in us-east-1; a representative request set with a defined "
+        "quality metric and an explicit quality threshold."
+    ),
+    "objectives_text": (
+        "Optimize performance (AIP-4.2) and cost (AIP-4.3) while preserving "
+        "quality, informed by model selection (AIP-1.2) and deployment choices "
+        "(AIP-2.2)."
+    ),
+    "region_note": "Low cost (on-demand calls for the benchmark). Stay in us-east-1.",
+    "recall_prompt": (
+        "What was your explicit quality threshold, and which optimization gave "
+        "the best cost/latency gain while holding it?"
+    ),
+    "cleanup": (
+        "This lab makes on-demand calls and creates no persistent resources. "
+        "Confirm no provisioned throughput, cache infrastructure, or saved "
+        "endpoint remains."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Define a fixed benchmark set and an explicit quality metric and "
+                "threshold. Measure the baseline configuration's quality, "
+                "latency, and cost per request."
+            ),
+            "prediction_prompt": (
+                "Predict which of quality, latency, or cost is your current " "weakest dimension."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the baseline measured on the same set you will reuse? Note "
+                "the quality threshold you committed to."
+            ),
+            "hints": [
+                "Optimization needs a fixed baseline and an explicit quality " "floor to protect.",
+                "Pick a measurable quality metric appropriate to the task.",
+                "Measure quality, latency, and cost together on the same set.",
+                "Freeze a benchmark set, define the quality metric and threshold, "
+                "and record baseline quality/latency/cost. Every optimization is "
+                "compared against this.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Apply one optimization at a time (trim prompt context, add "
+                "caching for repeats, route simple requests to a cheaper model) "
+                "and re-measure quality, latency, and cost after each."
+            ),
+            "prediction_prompt": ("Predict which optimization risks dropping quality the most."),
+            "mandatory": True,
+            "reflection": (
+                "Did any optimization breach the quality floor? Record the "
+                "before/after numbers per change."
+            ),
+            "hints": [
+                "Change one variable at a time so each gain is attributable.",
+                "Caching helps repeats; routing helps cost; trimming helps " "tokens.",
+                "Re-measure quality every time, not just cost and latency.",
+                "Apply each optimization separately and record before/after "
+                "quality, latency, and cost. Reject any change that drops quality "
+                "below the threshold.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Select the configuration with the best cost/latency improvement "
+                "that still meets the quality threshold, and write a decision "
+                "record citing the before/after numbers."
+            ),
+            "prediction_prompt": (
+                "Will the cheapest configuration be the one you ship? Why or why " "not?"
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the chosen configuration a genuine improvement without a "
+                "quality regression? State the trade-off you accepted."
+            ),
+            "hints": [
+                "The right optimization meets the quality floor at the best "
+                "cost/latency, not the absolute cheapest.",
+                "Weigh cost and latency gains against any quality movement.",
+                "Reject optimizations that save money by breaching quality.",
+                "Decision record: 'Config X cut cost from A to B and latency from "
+                "C to D while holding quality >= threshold, so we select it.' "
+                "Cite the measured numbers.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-baseline-measured",
+            "label": "Baseline quality/latency/cost measured",
+            "step_id": "s1",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-optimization-decision",
+            "label": "Optimization selected without quality regression",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+    ],
+}
+
+
 _AUTHORED_LABS: tuple[dict[str, Any], ...] = (
     _LAB_1,
     _LAB_2,
@@ -1375,6 +1676,8 @@ _AUTHORED_LABS: tuple[dict[str, Any], ...] = (
     _LAB_6,
     _LAB_7,
     _LAB_8,
+    _LAB_9,
+    _LAB_10,
 )
 
 

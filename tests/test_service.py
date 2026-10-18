@@ -178,19 +178,18 @@ def test_search_empty_query_rejected(service: StudyService) -> None:
 
 
 def test_no_content_raises_gap(service: StudyService) -> None:
-    # Filter to an objective that has questions, exhaust it, then expect a gap.
+    # Filter to a single objective, drain every eligible question, then the
+    # next request must raise a content gap. The count is not hard-coded so the
+    # test stays valid as authored coverage for the objective changes.
     session = service.start_session(
         learner_id="L1",
         mode=SessionMode.GRILL,
         objective_filter=("AIP-5.2",),
         request_id="r1",
     )
-    # Two prompts exist for AIP-5.2; serve both, then the next must gap.
-    service.next_question(session_id=session.session_id, request_id="nq1")
-    # Grade to avoid due-review re-selection, then serve the second.
-    service.next_question(session_id=session.session_id, request_id="nq2")
     with pytest.raises(ContentGapError):
-        service.next_question(session_id=session.session_id, request_id="nq3")
+        for i in range(50):  # bounded drain; the pool is far smaller
+            service.next_question(session_id=session.session_id, request_id=f"nq{i}")
 
 
 def test_scheduling_progression() -> None:

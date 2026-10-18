@@ -340,3 +340,39 @@ def test_domain3_gate_passes_with_full_evidence(connection: DbConnection, clock:
     assert by_key["accuracy"].met is True
     assert by_key["hands_on"].met is True
     assert gate.passed is True
+
+
+_DOMAIN4_OBJECTIVES = ("AIP-4.1", "AIP-4.2", "AIP-4.3")
+
+
+def test_domain4_gate_passes_with_full_evidence(connection: DbConnection, clock: FakeClock) -> None:
+    at = clock.now_utc().isoformat()
+    for objective in _DOMAIN4_OBJECTIVES:
+        qid = _one_question_for(connection, objective)
+        _seed_attempt(connection, learner_id="L4", question_id=qid, outcome="correct", at_iso=at)
+    # Lab 9 is a Domain 4 lab with a validated create check and absence cleanup.
+    labs = LabService(connection, clock, _PresenceThenAbsence())
+    run = labs.start_lab(
+        learner_id="L4",
+        lab_id="lab-09-observability-incident",
+        region="us-east-1",
+        request_id="start-d4",
+        acknowledged_cost=True,
+        acknowledged_cleanup=True,
+    )
+    labs.check(run_id=run.run_id, checkpoint_id="c1-instrumented-fn-present", event_id="chk-d4")
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c2-incident-diagnosed", event_id="sr-d4"
+    )
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c3-instrumented-fn-removed", event_id="sr-clean-d4"
+    )
+    labs.check(run_id=run.run_id, checkpoint_id="c3-instrumented-fn-removed", event_id="clean-d4")
+    labs.complete_lab(run_id=run.run_id, request_id="done-d4")
+
+    gate = _evaluator(connection, clock).evaluate(learner_id="L4", domain_id=4)
+    by_key = {c.key: c for c in gate.criteria}
+    assert by_key["coverage"].met is True
+    assert by_key["accuracy"].met is True
+    assert by_key["hands_on"].met is True
+    assert gate.passed is True
