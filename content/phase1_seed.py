@@ -15,10 +15,15 @@ from study_core.common import ALL_TASK_IDS
 from content.aip_c01 import build_seed_prompts
 from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
 from content.domain2_questions import QUESTIONS as DOMAIN2_QUESTIONS
+from content.domain3_questions import QUESTIONS as DOMAIN3_QUESTIONS
 from content.labs import build_authored_labs, build_lab_curriculum_items
 
 # All authored (non-placeholder) scenario questions across completed domains.
-_AUTHORED_QUESTIONS: list[dict[str, Any]] = [*DOMAIN1_QUESTIONS, *DOMAIN2_QUESTIONS]
+_AUTHORED_QUESTIONS: list[dict[str, Any]] = [
+    *DOMAIN1_QUESTIONS,
+    *DOMAIN2_QUESTIONS,
+    *DOMAIN3_QUESTIONS,
+]
 
 # Objectives that have real authored questions; their generic placeholders are
 # suppressed so the grill serves the genuine authored items for those objectives.

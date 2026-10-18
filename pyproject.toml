@@ -43,6 +43,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # Authored question/answer prose: long option and rationale strings are allowed.
 "content/domain1_questions.py" = ["E501"]
 "content/domain2_questions.py" = ["E501"]
+"content/domain3_questions.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

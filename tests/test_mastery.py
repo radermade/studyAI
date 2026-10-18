@@ -305,3 +305,38 @@ class _PresenceThenAbsence:
             observed_at=datetime.now(UTC),
             summary=f"fake:{validator_id}:{kind.value}",
         )
+
+
+_DOMAIN3_OBJECTIVES = ("AIP-3.1", "AIP-3.2", "AIP-3.3", "AIP-3.4")
+
+
+def test_domain3_gate_passes_with_full_evidence(connection: DbConnection, clock: FakeClock) -> None:
+    at = clock.now_utc().isoformat()
+    for objective in _DOMAIN3_OBJECTIVES:
+        qid = _one_question_for(connection, objective)
+        _seed_attempt(connection, learner_id="L3", question_id=qid, outcome="correct", at_iso=at)
+    # Lab 5 is a self-report-only Domain 3 lab (guardrail reasoning, no AWS
+    # resource to verify); its mandatory checkpoints complete via self-report.
+    labs = LabService(connection, clock, _PresenceThenAbsence())
+    run = labs.start_lab(
+        learner_id="L3",
+        lab_id="lab-05-guardrails-adversarial",
+        region="us-east-1",
+        request_id="start-d3",
+        acknowledged_cost=True,
+        acknowledged_cleanup=True,
+    )
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c1-guardrails-configured", event_id="sr1-d3"
+    )
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c2-adversarial-measured", event_id="sr2-d3"
+    )
+    labs.complete_lab(run_id=run.run_id, request_id="done-d3")
+
+    gate = _evaluator(connection, clock).evaluate(learner_id="L3", domain_id=3)
+    by_key = {c.key: c for c in gate.criteria}
+    assert by_key["coverage"].met is True
+    assert by_key["accuracy"].met is True
+    assert by_key["hands_on"].met is True
+    assert gate.passed is True

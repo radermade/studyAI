@@ -1055,13 +1055,326 @@ _LAB_7: dict[str, Any] = {
 }
 
 
+# --- Lab 5: Guardrails and adversarial testing -----------------------------
+
+_LAB_5: dict[str, Any] = {
+    "lab_id": "lab-05-guardrails-adversarial",
+    "title": "Lab 5: Guardrails and adversarial testing",
+    "objective_ids": ["AIP-3.1", "AIP-3.4", "AIP-5.1"],
+    "cost_class": "low",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will put layered guardrails around a Bedrock model (input "
+        "filtering, grounding, output filtering), build an adversarial test set "
+        "including prompt-injection attempts, and measure the block rate and "
+        "false-positive rate so safety is evidence-based rather than assumed."
+    ),
+    "architecture": (
+        "Requests pass through input guardrails, the model (grounded where "
+        "applicable), then output guardrails. An adversarial test set drives "
+        "the system and block/false-positive rates are recorded."
+    ),
+    "prerequisites": (
+        "Bedrock access in us-east-1; a guardrail capability (e.g., Bedrock "
+        "Guardrails) or an equivalent input/output filter you can configure; a "
+        "small labeled attack set and a benign set."
+    ),
+    "objectives_text": (
+        "Design layered safety controls and defend against injection (AIP-3.1), "
+        "document the safety posture (AIP-3.4), and evaluate guardrails with a "
+        "repeatable method (AIP-5.1)."
+    ),
+    "region_note": "us-east-1 for model/guardrail availability; no cross-Region calls.",
+    "recall_prompt": (
+        "Name the three guardrail layers you used and the two rates you measured " "to judge them."
+    ),
+    "cleanup": (
+        "If you created a managed guardrail resource, delete it; otherwise no "
+        "persistent resources are created. Confirm no test guardrail remains "
+        "attached to a production alias."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Configure layered guardrails: an input filter (deny-listed "
+                "topics / injection patterns), grounding where applicable, and "
+                "an output filter for harmful content."
+            ),
+            "prediction_prompt": (
+                "Predict which layer will catch an indirect prompt-injection "
+                "attempt carried in retrieved text."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Which layer actually caught injection in testing? Note whether "
+                "one layer alone would have sufficed."
+            ),
+            "hints": [
+                "Defense in depth means no single layer is the only thing "
+                "standing between a bypass and harm.",
+                "Bedrock Guardrails can enforce denied topics and content "
+                "filters at input and output.",
+                "Treat retrieved/user content as untrusted and keep it separate "
+                "from instructions.",
+                "Configure input filtering, grounding, and output filtering so a "
+                "miss in one layer is caught by another. Isolate untrusted "
+                "content from the instruction channel.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Build an adversarial test set (direct and indirect injection, "
+                "data-exfiltration attempts, harmful requests) plus a benign set "
+                "of legitimate requests."
+            ),
+            "prediction_prompt": (
+                "Predict your false-positive rate on the benign set before " "running it."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the benign set large and varied enough to expose false "
+                "positives? Note any gap."
+            ),
+            "hints": [
+                "You cannot measure guardrails without both attacks and benign " "traffic.",
+                "Cover direct injection, indirect (retrieved) injection, and "
+                "exfiltration prompts.",
+                "Label each case so you can score blocks and false positives.",
+                "Assemble a labeled attack set and a benign set; the benign set "
+                "is what reveals over-blocking (false positives).",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Run both sets through the guarded system and record the block "
+                "rate on attacks and the false-positive rate on benign requests. "
+                "Document an acceptable balance and remaining risk."
+            ),
+            "prediction_prompt": (
+                "Predict whether tightening the filter to raise the block rate "
+                "will raise false positives."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "What balance did you accept, and what residual risk remains "
+                "documented for stakeholders?"
+            ),
+            "hints": [
+                "Safety is a measured trade-off between blocking harm and "
+                "blocking legitimate use.",
+                "Report both the attack block rate and the benign false-positive " "rate.",
+                "Record residual risk the guardrails do not cover.",
+                "Produce a table: block rate, false-positive rate, chosen "
+                "threshold, and documented residual risk. This is the safety "
+                "evidence a system card references.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-guardrails-configured",
+            "label": "Layered guardrails configured",
+            "step_id": "s1",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-adversarial-measured",
+            "label": "Block and false-positive rates recorded",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+    ],
+}
+
+# --- Lab 8: Secure multi-tenant RAG ----------------------------------------
+
+_LAB_8: dict[str, Any] = {
+    "lab_id": "lab-08-secure-multitenant-rag",
+    "title": "Lab 8: Secure multi-tenant RAG",
+    "objective_ids": ["AIP-3.3", "AIP-1.4", "AIP-2.3", "AIP-3.2"],
+    "cost_class": "medium",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will build a RAG knowledge base holding documents for two tenants "
+        "and prove that identity-aware, server-side authorization lets each "
+        "tenant retrieve only its own documents, with an audit trail of who "
+        "accessed what."
+    ),
+    "architecture": (
+        "Tenant-tagged documents live in S3 and are indexed into a vector "
+        "store. Each query carries a tenant identity; retrieval applies "
+        "server-side authorization and metadata filtering, and access is "
+        "logged for audit."
+    ),
+    "prerequisites": (
+        "Permission to create an S3 bucket and a Bedrock Knowledge Base in "
+        "us-east-1; the ability to tag documents by tenant; a way to pass a "
+        "tenant identity with each query."
+    ),
+    "objectives_text": (
+        "Enforce identity-aware access and tenant isolation (AIP-3.3), build a "
+        "scoped vector store (AIP-1.4), apply secure integration boundaries "
+        "(AIP-2.3), and keep an auditable access record (AIP-3.2)."
+    ),
+    "region_note": (
+        "Creates billable S3 + Knowledge Base resources. Stay in us-east-1 and " "complete cleanup."
+    ),
+    "recall_prompt": (
+        "Where was tenant isolation enforced, and why is a prompt instruction "
+        "or client-side filter not enough?"
+    ),
+    "cleanup": (
+        "Delete the Knowledge Base and its vector store, then empty and delete "
+        "the S3 bucket. Re-list buckets to confirm absence before marking "
+        "cleanup verified."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Create an S3 bucket and upload documents for two tenants, each "
+                "object tagged with its tenant ID. Keep tenant A and tenant B "
+                "content clearly separated."
+            ),
+            "prediction_prompt": (
+                "Predict what happens if tenant metadata is missing on even one " "object."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did every object get a tenant tag? Note how a missing tag could " "become a leak."
+            ),
+            "hints": [
+                "Isolation depends on reliable tenant metadata on every object.",
+                "Use S3 object metadata/tags to carry the tenant ID.",
+                "An untagged object cannot be safely filtered by tenant.",
+                "Create one bucket, upload tenant-A and tenant-B documents, and "
+                "tag every object with its tenant ID. Missing tags are future "
+                "leaks.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Index the documents into a Knowledge Base vector store, then "
+                "configure retrieval so each query is scoped by the caller's "
+                "tenant identity using server-side metadata filtering."
+            ),
+            "prediction_prompt": (
+                "Predict whether a prompt instruction alone could enforce the " "tenant boundary."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the tenant filter applied before retrieval (server-side) "
+                "rather than after? Note where it runs."
+            ),
+            "hints": [
+                "Authorization must happen at retrieval time, server-side, not "
+                "in the prompt or client.",
+                "Metadata filtering scopes retrieval to the caller's tenant.",
+                "The identity must come from an authenticated caller, not from "
+                "user-supplied text.",
+                "Index the docs, then enforce a server-side metadata filter keyed "
+                "on the authenticated tenant identity so disallowed documents "
+                "are never fetched.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Test isolation: as tenant A, query for content that exists only "
+                "in tenant B. Confirm it is never retrieved. Record an audit "
+                "entry (identity, resource, timestamp) for each access."
+            ),
+            "prediction_prompt": (
+                "Predict whether any phrasing as tenant A could surface tenant " "B's document."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did any query cross the tenant boundary? Capture the audit "
+                "entries proving who accessed what."
+            ),
+            "hints": [
+                "A leak test must actively try to retrieve the other tenant's " "data.",
+                "The audit log must tie identity to the specific resource and " "time.",
+                "Try several phrasings as tenant A to probe the boundary.",
+                "Confirm tenant A never retrieves tenant B content across "
+                "phrasings, and record identity+resource+timestamp audit entries "
+                "as proof of controlled access.",
+            ],
+        },
+        {
+            "step_id": "s4",
+            "display_order": 4,
+            "instruction": (
+                "Clean up: delete the Knowledge Base and vector store, then "
+                "empty and delete the S3 bucket. Re-list buckets to confirm it "
+                "is gone."
+            ),
+            "prediction_prompt": ("Which resource, if left, could still expose tenant data?"),
+            "mandatory": True,
+            "reflection": (
+                "Did deletion remove both the index and the bucket? Note the " "dependency order."
+            ),
+            "hints": [
+                "A clicked delete is not proof; absence is.",
+                "Delete the Knowledge Base first, then the S3 bucket.",
+                "Empty the bucket (objects and versions) before deleting it.",
+                "After deletion, re-list buckets and confirm absence. The cleanup "
+                "checkpoint verifies only on observed absence.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-tenant-bucket-present",
+            "label": "Tenant-tagged source bucket present",
+            "step_id": "s1",
+            "validator_id": "s3-bucket-present",
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-isolation-proven",
+            "label": "Cross-tenant isolation and audit proven",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-tenant-bucket-removed",
+            "label": "Tenant source bucket removed",
+            "step_id": "s4",
+            "validator_id": "s3-bucket-absent",
+            "is_cleanup": True,
+            "mandatory": True,
+        },
+    ],
+}
+
+
 _AUTHORED_LABS: tuple[dict[str, Any], ...] = (
     _LAB_1,
     _LAB_2,
     _LAB_3,
     _LAB_4,
+    _LAB_5,
     _LAB_6,
     _LAB_7,
+    _LAB_8,
 )
 
 

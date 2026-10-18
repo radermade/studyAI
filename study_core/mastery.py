@@ -257,10 +257,11 @@ class MasteryEvaluator:
         for row in rows:
             objectives = [str(o) for o in json.loads(row["objective_ids"])]
             domains = {_domain_of_safe(o) for o in objectives}
-            # A lab belongs to its primary (lowest) objective domain, matching
-            # the scored-session convention that each item maps to one domain.
-            primary = min((d for d in domains if d is not None), default=None)
-            if primary == domain_id:
+            # A lab provides hands-on evidence for every domain it touches, so it
+            # counts for a domain if ANY of its objectives is in that domain.
+            # (Unlike scored questions, which map to one primary domain for
+            # weighted selection, a lab is multi-domain hands-on evidence.)
+            if domain_id in domains:
                 lab_ids.append(str(row["lab_id"]))
         return lab_ids
 

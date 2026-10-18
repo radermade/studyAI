@@ -522,6 +522,17 @@ Exit gate:
 - Security controls are validated at identity, data, retrieval, model, tool, output, and audit layers.
 - At least 80% accuracy on fresh Domain 3 scenarios.
 
+Status: Implemented. 16 authored Domain 3 questions (4 per task, AIP-3.1-3.4)
+cover layered guardrails and prompt-injection defense, privacy/PII/residency,
+identity-aware access and tenant isolation, and governance (system cards,
+fairness, human oversight, lineage). Labs 5 (layered guardrails + adversarial
+test set with measured block/false-positive rates) and 8 (secure multi-tenant
+RAG with server-side identity-aware retrieval and an audit trail) are authored
+as data-driven walkthroughs. The per-domain `MasteryEvaluator` enforces the
+Domain 3 exit gate, surfaced in the Progress view; its hands-on criterion now
+counts a lab for every domain it touches (not just the primary), so
+multi-domain security labs register correctly.
+
 ### Phase 6 — Domain 4 mastery: operations, performance, and cost
 
 **Goal:** Operate GenAI applications against explicit service-level and business objectives.
