@@ -14,11 +14,15 @@ from study_core.common import ALL_TASK_IDS
 
 from content.aip_c01 import build_seed_prompts
 from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
+from content.domain2_questions import QUESTIONS as DOMAIN2_QUESTIONS
 from content.labs import build_authored_labs, build_lab_curriculum_items
 
+# All authored (non-placeholder) scenario questions across completed domains.
+_AUTHORED_QUESTIONS: list[dict[str, Any]] = [*DOMAIN1_QUESTIONS, *DOMAIN2_QUESTIONS]
+
 # Objectives that have real authored questions; their generic placeholders are
-# suppressed so the grill serves the genuine Domain 1 items.
-_AUTHORED_OBJECTIVES = {obj for q in DOMAIN1_QUESTIONS for obj in q["objective_ids"]}
+# suppressed so the grill serves the genuine authored items for those objectives.
+_AUTHORED_OBJECTIVES = {obj for q in _AUTHORED_QUESTIONS for obj in q["objective_ids"]}
 
 # Four generic options per placeholder question (option "a" is keyed-correct).
 # Placeholders remain only for objectives without authored content yet.
@@ -36,8 +40,8 @@ def _is_placeholder_for_authored(objective_ids: tuple[str, ...]) -> bool:
 
 
 def build_rich_questions() -> list[dict[str, Any]]:
-    """Return the authored Domain 1 questions in ingestion shape."""
-    return DOMAIN1_QUESTIONS
+    """Return the authored scenario questions (Domains 1-2) in ingestion shape."""
+    return _AUTHORED_QUESTIONS
 
 
 def build_question_options() -> dict[str, tuple[tuple[str, str], ...]]:
@@ -47,7 +51,7 @@ def build_question_options() -> dict[str, tuple[tuple[str, str], ...]]:
         if _is_placeholder_for_authored(prompt.objective_ids):
             continue
         options[prompt.question_id] = _OPTIONS
-    for question in DOMAIN1_QUESTIONS:
+    for question in _AUTHORED_QUESTIONS:
         options[question["question_id"]] = tuple((oid, text) for oid, text in question["options"])
     return options
 
@@ -67,7 +71,7 @@ def build_answer_material() -> dict[str, dict[str, Any]]:
             "explanation": "",
             "rationales": {},
         }
-    for question in DOMAIN1_QUESTIONS:
+    for question in _AUTHORED_QUESTIONS:
         material[question["question_id"]] = {
             "correct_option_ids": question["correct_option_ids"],
             "rubric": question["explanation"],

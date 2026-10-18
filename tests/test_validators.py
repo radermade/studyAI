@@ -47,6 +47,22 @@ def test_s3_bucket_absent_interprets_no_buckets() -> None:
     assert evidence.kind == EvidenceKind.RESOURCE_ABSENT
 
 
+def test_apigateway_present_interprets_items() -> None:
+    validator = AwsReadOnlyValidator(factory=_StubApiFactory(apis=True))
+    evidence = validator.validate(
+        ValidationRequest(validator_id="apigateway-api-present", region="us-east-1")
+    )
+    assert evidence.kind == EvidenceKind.RESOURCE_PRESENT
+
+
+def test_apigateway_absent_interprets_no_items() -> None:
+    validator = AwsReadOnlyValidator(factory=_StubApiFactory(apis=False))
+    evidence = validator.validate(
+        ValidationRequest(validator_id="apigateway-api-absent", region="us-east-1")
+    )
+    assert evidence.kind == EvidenceKind.RESOURCE_ABSENT
+
+
 class _FailFactory:
     def client(self, service: str, region: str, profile_name: str | None) -> object:
         raise AssertionError("client must not be built for a disallowed validator")
@@ -67,3 +83,20 @@ class _StubS3Factory:
     def client(self, service: str, region: str, profile_name: str | None) -> _StubS3Client:
         assert service == "s3"
         return _StubS3Client(self._buckets)
+
+
+class _StubApiClient:
+    def __init__(self, apis: bool) -> None:
+        self._apis = apis
+
+    def get_rest_apis(self) -> dict[str, object]:
+        return {"items": [{"id": "a"}] if self._apis else []}
+
+
+class _StubApiFactory:
+    def __init__(self, apis: bool) -> None:
+        self._apis = apis
+
+    def client(self, service: str, region: str, profile_name: str | None) -> _StubApiClient:
+        assert service == "apigateway"
+        return _StubApiClient(self._apis)

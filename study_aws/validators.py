@@ -24,6 +24,9 @@ VALIDATOR_ALLOWLIST: dict[str, tuple[str, str]] = {
     "s3-bucket-present": ("s3", "list_buckets"),
     "s3-bucket-absent": ("s3", "list_buckets"),
     "lambda-function-present": ("lambda", "list_functions"),
+    "lambda-function-absent": ("lambda", "list_functions"),
+    "apigateway-api-present": ("apigateway", "get_rest_apis"),
+    "apigateway-api-absent": ("apigateway", "get_rest_apis"),
 }
 
 _READONLY_PREFIXES = ("describe_", "list_", "get_")
@@ -83,8 +86,10 @@ def _interpret_presence(validator_id: str, response: dict[str, Any]) -> bool:
         return bool(response.get("modelSummaries"))
     if validator_id in ("s3-bucket-present", "s3-bucket-absent"):
         return bool(response.get("Buckets"))
-    if validator_id == "lambda-function-present":
+    if validator_id in ("lambda-function-present", "lambda-function-absent"):
         return bool(response.get("Functions"))
+    if validator_id in ("apigateway-api-present", "apigateway-api-absent"):
+        return bool(response.get("items"))
     return False
 
 

@@ -375,7 +375,7 @@ class LabService:
 
     def _unmet_mandatory_checkpoints(self, run_id: str, lab_id: str) -> list[str]:
         mandatory = self._conn.execute(
-            "SELECT checkpoint_id, is_cleanup FROM lab_checkpoints "
+            "SELECT checkpoint_id, is_cleanup, validator_id FROM lab_checkpoints "
             "WHERE lab_id = ? AND mandatory = 1 ORDER BY checkpoint_id",
             (lab_id,),
         ).fetchall()
@@ -388,12 +388,18 @@ class LabService:
         unmet: list[str] = []
         for row in mandatory:
             cid = str(row["checkpoint_id"])
-            needed = (
-                CheckpointState.CLEANED_UP.value
-                if bool(row["is_cleanup"])
-                else CheckpointState.VERIFIED.value
-            )
-            if states.get(cid) != needed:
+            state = states.get(cid)
+            if bool(row["is_cleanup"]):
+                # Cleanup always requires proven absence/terminal-deletion state.
+                satisfied = state == CheckpointState.CLEANED_UP.value
+            elif row["validator_id"] is None:
+                # A reasoning/evidence checkpoint with no AWS resource to verify
+                # is satisfied by a committed self-report (it can never reach
+                # VERIFIED, which requires validator evidence by design).
+                satisfied = state == CheckpointState.SELF_REPORTED.value
+            else:
+                satisfied = state == CheckpointState.VERIFIED.value
+            if not satisfied:
                 unmet.append(cid)
         return unmet
 

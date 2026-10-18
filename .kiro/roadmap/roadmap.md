@@ -490,6 +490,20 @@ Exit gate:
 - Agent and API failure drills are completed from logs/traces.
 - At least 80% accuracy on fresh Domain 2 scenarios.
 
+Status: Implemented. 20 authored Domain 2 questions (4 per task, AIP-2.1-2.5)
+cover agents/tools, deployment/capacity, enterprise integration, FM-API
+resilience, and async/routing/observability, including unsafe-autonomy and
+failure-handling scenarios. Labs 6 (bounded tool-using agent: typed schema,
+least-privilege IAM, timeout, trace, human escalation, unsafe-call failure
+drill) and 7 (streaming + async + bounded retries + routing + throttle
+fallback with correlated traces) are authored as data-driven walkthroughs. The
+per-domain `MasteryEvaluator` enforces the Domain 2 exit gate (coverage,
+>= 80% grill accuracy, no open misconceptions, hands-on lab completion;
+informational scored-session accuracy), surfaced in the Progress view. A lab
+lifecycle fix lets mandatory validator-less reasoning checkpoints complete via
+committed self-report while still requiring validator evidence for Verified and
+proven absence for Cleaned up.
+
 ### Phase 5 — Domain 3 mastery: safety, security, privacy, and governance
 
 **Goal:** Make security and responsible AI architectural concerns, not final-layer filters.

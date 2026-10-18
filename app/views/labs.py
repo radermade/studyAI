@@ -187,6 +187,26 @@ def _render_checkpoints(
         req = "required" if cp.mandatory else "optional"
         status_badge(_STATE_TONE[state], f"{cp.label} [{kind}, {req}]: {state.value}")
 
+        # A cleanup checkpoint must first be self-reported (deletion requested),
+        # then confirmed by an absence check; VERIFIED is reached by evidence
+        # only. So cleanup validated checkpoints expose a self-report step until
+        # it has been reported, matching the checkpoint state machine.
+        needs_self_report = cp.is_cleanup and state in (
+            CheckpointState.NOT_STARTED,
+            CheckpointState.IN_PROGRESS,
+        )
+        if cp.validator_id is None or needs_self_report:
+            label = "Mark deletion requested" if cp.is_cleanup else "Self-report"
+            if st.button(
+                f"{label}: {cp.label}",
+                key=f"lab_selfreport_{cp.checkpoint_id}",
+            ):
+                runtime.labs.record_self_report(
+                    run_id=run_id,
+                    checkpoint_id=cp.checkpoint_id,
+                    event_id=f"sr-{uuid.uuid4().hex}",
+                )
+                st.rerun()
         if cp.validator_id is not None:
             disabled = runtime.labs is None
             if st.button(
@@ -205,17 +225,6 @@ def _render_checkpoints(
                     error_state(str(exc))
                 except Exception:
                     error_state("AWS validation is unavailable right now.")
-        else:
-            if st.button(
-                f"Self-report: {cp.label}",
-                key=f"lab_selfreport_{cp.checkpoint_id}",
-            ):
-                runtime.labs.record_self_report(
-                    run_id=run_id,
-                    checkpoint_id=cp.checkpoint_id,
-                    event_id=f"sr-{uuid.uuid4().hex}",
-                )
-                st.rerun()
 
     if st.button("Complete lab", key="lab_complete"):
         try:

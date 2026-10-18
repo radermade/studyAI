@@ -238,3 +238,70 @@ class _FirstChoice:
         if upper_bound <= 0:
             raise ValueError("upper_bound must be positive")
         return 0
+
+
+_DOMAIN2_OBJECTIVES = ("AIP-2.1", "AIP-2.2", "AIP-2.3", "AIP-2.4", "AIP-2.5")
+
+
+def test_domain2_gate_passes_with_full_evidence(connection: DbConnection, clock: FakeClock) -> None:
+    at = clock.now_utc().isoformat()
+    # Cover every Domain 2 objective with a correct attempt.
+    for objective in _DOMAIN2_OBJECTIVES:
+        qid = _one_question_for(connection, objective)
+        _seed_attempt(connection, learner_id="L2", question_id=qid, outcome="correct", at_iso=at)
+    # Complete the Domain 2 bounded-agent lab independently. The validator
+    # reports presence for the create check and absence for the cleanup check.
+    labs = LabService(connection, clock, _PresenceThenAbsence())
+    run = labs.start_lab(
+        learner_id="L2",
+        lab_id="lab-06-bounded-agent",
+        region="us-east-1",
+        request_id="start-d2",
+        acknowledged_cost=True,
+        acknowledged_cleanup=True,
+    )
+    labs.check(run_id=run.run_id, checkpoint_id="c1-tool-function-present", event_id="chk-d2")
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c2-unsafe-call-rejected", event_id="sr-d2"
+    )
+    # A cleanup checkpoint is self-reported (deletion requested), then the
+    # read-only absence check confirms it, moving it to CLEANED_UP.
+    labs.record_self_report(
+        run_id=run.run_id, checkpoint_id="c3-tool-function-removed", event_id="sr-clean-d2"
+    )
+    labs.check(run_id=run.run_id, checkpoint_id="c3-tool-function-removed", event_id="clean-d2")
+    labs.complete_lab(run_id=run.run_id, request_id="done-d2")
+
+    gate = _evaluator(connection, clock).evaluate(learner_id="L2", domain_id=2)
+    by_key = {c.key: c for c in gate.criteria}
+    assert by_key["coverage"].met is True
+    assert by_key["accuracy"].met is True
+    assert by_key["hands_on"].met is True
+    assert gate.passed is True
+
+
+class _PresenceThenAbsence:
+    """Validator fake: resources present on create checks, absent on cleanup.
+
+    Cleanup validator IDs end with ``-absent`` by convention, so the cleanup
+    check observes absence (which establishes CLEANED_UP) while create checks
+    observe presence (which establishes VERIFIED).
+    """
+
+    def validate(self, request: object) -> object:
+        from datetime import UTC, datetime
+
+        from study_core.lab_models import EvidenceKind, ValidationEvidence
+
+        validator_id = getattr(request, "validator_id", "")
+        kind = (
+            EvidenceKind.RESOURCE_ABSENT
+            if validator_id.endswith("-absent")
+            else EvidenceKind.RESOURCE_PRESENT
+        )
+        return ValidationEvidence(
+            attempt_id="",
+            kind=kind,
+            observed_at=datetime.now(UTC),
+            summary=f"fake:{validator_id}:{kind.value}",
+        )

@@ -15,8 +15,8 @@ def _ui(connection: DbConnection, clock: FakeClock) -> UiStateService:
 def test_curriculum_is_ordered(connection: DbConnection, clock: FakeClock) -> None:
     ui = _ui(connection, clock)
     items = ui.list_curriculum()
-    # 20 lessons (one per task) plus 4 authored labs.
-    assert len(items) == 24
+    # 20 lessons (one per task) plus 6 authored labs.
+    assert len(items) == 26
     orders = [item.display_order for item in items]
     assert orders == sorted(orders)
 

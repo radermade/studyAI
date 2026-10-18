@@ -9,9 +9,9 @@ from study_core.study_models import DomainMasteryReport
 from app.components import status_badge
 from app.theme import StatusTone
 
-# Domains the learner has any objective-level content/evidence for. The product
-# currently centers on Domain 1; the exit gate is per-domain and extensible.
-_EVALUATED_DOMAINS: tuple[int, ...] = (1,)
+# Domains with authored content and an enforceable exit gate. The gate is
+# per-domain and extensible; domains are added here as their content lands.
+_EVALUATED_DOMAINS: tuple[int, ...] = (1, 2)
 
 
 def render(runtime: StudyRuntime, learner: str) -> None:
@@ -48,15 +48,15 @@ def _render_exit_gates(runtime: StudyRuntime, learner: str) -> None:
     )
     for domain_id in _EVALUATED_DOMAINS:
         gate = runtime.mastery.evaluate(learner_id=learner, domain_id=domain_id)
-        _render_gate(domain_id, gate)
+        _render_gate(domain_id, gate, expanded=domain_id == _EVALUATED_DOMAINS[0])
     st.divider()
 
 
-def _render_gate(domain_id: int, gate: DomainMasteryReport) -> None:
+def _render_gate(domain_id: int, gate: DomainMasteryReport, *, expanded: bool) -> None:
     tone = StatusTone.SUCCESS if gate.passed else StatusTone.PROGRESS
     verdict = "PASSED" if gate.passed else "not yet met"
     accuracy = f"{gate.grill_accuracy:.0%}" if gate.grill_accuracy is not None else "n/a"
-    with st.expander(f"Domain {domain_id} exit gate: {verdict}", expanded=domain_id == 1):
+    with st.expander(f"Domain {domain_id} exit gate: {verdict}", expanded=expanded):
         status_badge(
             tone,
             f"Domain {domain_id} gate {verdict} "

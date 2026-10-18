@@ -678,11 +678,395 @@ _LAB_4: dict[str, Any] = {
 }
 
 
-_AUTHORED_LABS: tuple[dict[str, Any], ...] = (_LAB_1, _LAB_2, _LAB_3, _LAB_4)
+# --- Lab 6: Bounded tool-using agent --------------------------------------
+
+_LAB_6: dict[str, Any] = {
+    "lab_id": "lab-06-bounded-agent",
+    "title": "Lab 6: Bounded tool-using agent",
+    "objective_ids": ["AIP-2.1", "AIP-3.1", "AIP-4.3", "AIP-5.1"],
+    "cost_class": "medium",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will build a small agent that calls one AWS tool (a Lambda "
+        "function) under strict bounds: a typed tool schema, a least-privilege "
+        "IAM role, a timeout, a correlation trace, and a human-escalation path. "
+        "Then you will inject an unsafe tool call and prove the agent rejects "
+        "it rather than executing it."
+    ),
+    "architecture": (
+        "The agent plans, validates tool arguments against a schema, invokes a "
+        "least-privilege Lambda tool with a timeout, emits a correlation ID on "
+        "every step, and escalates to a human for any out-of-policy action."
+    ),
+    "prerequisites": (
+        "Permission to create an IAM role and a Lambda function in us-east-1; "
+        "Bedrock access for the agent's model; CloudWatch Logs enabled."
+    ),
+    "objectives_text": (
+        "Design a bounded agent with typed tools and limits (AIP-2.1), enforce "
+        "least privilege and safe failure (AIP-3.1), diagnose from traces "
+        "(AIP-4.3), and evaluate the safety behavior (AIP-5.1)."
+    ),
+    "region_note": (
+        "Creates a Lambda function and IAM role (low cost). Stay in us-east-1 "
+        "and complete cleanup."
+    ),
+    "recall_prompt": (
+        "Name the five bounds every tool-using agent in this lab enforced "
+        "before any tool call executed."
+    ),
+    "cleanup": (
+        "Delete the Lambda function and the IAM role created for the agent. "
+        "Re-list functions to confirm the tool function is gone before marking "
+        "cleanup verified."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Create a minimal Lambda 'tool' function and a least-privilege "
+                "IAM role that grants only the single action the tool needs. "
+                "Attach the role to the function."
+            ),
+            "prediction_prompt": (
+                "Predict which permission the tool truly needs, and which you "
+                "might over-grant by habit."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did the role end up broader than the one action required? Note "
+                "what you trimmed to reach least privilege."
+            ),
+            "hints": [
+                "Least privilege means the role grants only the actions the tool "
+                "actually calls.",
+                "Create the IAM role first, then the Lambda, then attach the role "
+                "in the console.",
+                "Start from an empty policy and add exactly one action; avoid "
+                "wildcard resources.",
+                "Create a Lambda tool and a role whose policy lists only the one "
+                "needed action on the specific resource. This bounds what a "
+                "misbehaving agent can do.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Define a typed tool schema (name, parameters, types) and wire "
+                "the agent to validate arguments against it before calling, with "
+                "a per-call timeout and a correlation ID logged on each step."
+            ),
+            "prediction_prompt": (
+                "Predict what the agent should do when the model proposes "
+                "arguments that fail schema validation."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did a malformed argument get rejected at the schema boundary "
+                "before any AWS call? Note where the rejection happened."
+            ),
+            "hints": [
+                "The tool schema is the contract; validation happens before the "
+                "call, not after.",
+                "Set a Lambda/client timeout and generate a correlation ID per " "agent run.",
+                "Log the correlation ID on plan, validate, call, and result " "steps.",
+                "Validate every argument against the schema first; on failure, "
+                "reject the call and log it with the correlation ID. Enforce a "
+                "timeout so a slow tool cannot hang the run.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Inject an unsafe/out-of-policy tool call (e.g., an action the "
+                "role does not permit, or arguments outside the schema). Confirm "
+                "the agent rejects it with a bounded failure and escalates "
+                "rather than executing."
+            ),
+            "prediction_prompt": (
+                "Predict whether the failure will come from schema validation, "
+                "the IAM boundary, or both."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Was the unsafe call stopped by your validation, by IAM, or both "
+                "(defense in depth)? Capture the sanitized evidence."
+            ),
+            "hints": [
+                "A safe agent fails closed on an out-of-policy action, never open.",
+                "The IAM role should deny the action even if validation were " "bypassed.",
+                "Capture the sanitized denial from CloudWatch using the " "correlation ID.",
+                "Prove defense in depth: schema validation rejects the bad "
+                "arguments and the least-privilege role denies the action. "
+                "Record the sanitized trace as evidence of safe failure.",
+            ],
+        },
+        {
+            "step_id": "s4",
+            "display_order": 4,
+            "instruction": (
+                "Clean up: delete the Lambda function and the IAM role. Re-list "
+                "functions to confirm the tool function no longer exists."
+            ),
+            "prediction_prompt": (
+                "Which resource, left behind, would keep an unused permission " "alive?"
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did you remove both the function and the role? Note the order "
+                "and any dependency you hit."
+            ),
+            "hints": [
+                "A clicked delete is not proof; confirm absence.",
+                "Delete the Lambda function, then the IAM role it used.",
+                "Detach the role from the function before deleting the role if " "required.",
+                "After deletion, re-list functions and confirm the tool function "
+                "is absent. The cleanup checkpoint verifies only on observed "
+                "absence.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-tool-function-present",
+            "label": "Agent tool (Lambda) created",
+            "step_id": "s1",
+            "validator_id": "lambda-function-present",
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-unsafe-call-rejected",
+            "label": "Unsafe tool call rejected (defense in depth)",
+            "step_id": "s3",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-tool-function-removed",
+            "label": "Agent tool (Lambda) removed",
+            "step_id": "s4",
+            "validator_id": "lambda-function-absent",
+            "is_cleanup": True,
+            "mandatory": True,
+        },
+    ],
+}
+
+# --- Lab 7: Resilient streaming/async API integration ----------------------
+
+_LAB_7: dict[str, Any] = {
+    "lab_id": "lab-07-resilient-api",
+    "title": "Lab 7: Resilient streaming and async API integration",
+    "objective_ids": ["AIP-2.3", "AIP-2.4", "AIP-2.5"],
+    "cost_class": "medium",
+    "regions": ["us-east-1"],
+    "scenario": (
+        "You will put an API Gateway + Lambda in front of a Bedrock model, add "
+        "streaming for responsiveness, an asynchronous/queued path for "
+        "long-running work, bounded retries with backoff, and model routing. "
+        "Then you will inject throttling and prove a bounded fallback with "
+        "correlated traces."
+    ),
+    "architecture": (
+        "Clients call API Gateway, which invokes a Lambda that either streams a "
+        "synchronous Bedrock response or enqueues long work for async "
+        "processing. Retries use bounded backoff; a routing policy chooses the "
+        "model; traces correlate every hop."
+    ),
+    "prerequisites": (
+        "Permission to create API Gateway, Lambda, and a queue in us-east-1; "
+        "Bedrock access; CloudWatch and X-Ray (or equivalent) enabled."
+    ),
+    "objectives_text": (
+        "Integrate via managed API boundaries (AIP-2.3), implement streaming "
+        "and resilient API patterns (AIP-2.4), and add async/routing/trace "
+        "handling with bounded failure (AIP-2.5)."
+    ),
+    "region_note": (
+        "Creates API Gateway, Lambda, and a queue (low-to-medium cost). Stay in "
+        "us-east-1 and complete cleanup."
+    ),
+    "recall_prompt": (
+        "When the model was throttled, what bounded behavior kept the API from "
+        "a retry storm or a false success?"
+    ),
+    "cleanup": (
+        "Delete the API, the Lambda, and the queue created for this lab. "
+        "Re-list APIs to confirm the API is gone before marking cleanup "
+        "verified."
+    ),
+    "steps": [
+        {
+            "step_id": "s1",
+            "display_order": 1,
+            "instruction": (
+                "Create an API Gateway endpoint fronting a Lambda that calls a "
+                "Bedrock model synchronously, and stream tokens back to the "
+                "caller as they are generated."
+            ),
+            "prediction_prompt": (
+                "Predict how streaming changes perceived latency versus a " "buffered response."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did first-token time improve noticeably with streaming? Note "
+                "the perceived vs. total latency difference."
+            ),
+            "hints": [
+                "Streaming improves perceived latency without changing total " "generation time.",
+                "Put API Gateway in front of a Lambda; do not expose the model " "directly.",
+                "Use the model's streaming response API and forward chunks to " "the client.",
+                "Create API Gateway -> Lambda -> Bedrock (streaming). Forward "
+                "tokens as they arrive so the client sees output immediately.",
+            ],
+        },
+        {
+            "step_id": "s2",
+            "display_order": 2,
+            "instruction": (
+                "Add an asynchronous path: for long-running requests, enqueue "
+                "the work and return a job handle, processing it off the "
+                "synchronous request path."
+            ),
+            "prediction_prompt": (
+                "Predict which requests should take the async path instead of "
+                "streaming synchronously."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did the async path keep the synchronous endpoint responsive "
+                "under long jobs? Note the handoff mechanism."
+            ),
+            "hints": [
+                "Long-running work should not block a synchronous request " "thread.",
+                "Use a queue to decouple submission from processing.",
+                "Return a job id immediately; process the work asynchronously.",
+                "Enqueue long jobs and return a handle; a worker processes them "
+                "off the request path so the sync endpoint stays responsive.",
+            ],
+        },
+        {
+            "step_id": "s3",
+            "display_order": 3,
+            "instruction": (
+                "Add bounded exponential backoff with jitter and a max-attempt "
+                "cap, plus a routing policy that sends simple requests to a "
+                "cheaper model and hard ones to a stronger model with a safe "
+                "fallback."
+            ),
+            "prediction_prompt": (
+                "Predict what should happen when the router cannot confidently "
+                "classify a request."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Did your retry policy have a hard attempt cap, and did routing "
+                "define a no-route fallback? Note both."
+            ),
+            "hints": [
+                "Unbounded or synchronized retries create storms; backoff with "
+                "jitter avoids them.",
+                "A routing policy needs explicit criteria and a defined fallback.",
+                "Cap attempts and classify which errors are even retryable.",
+                "Add backoff+jitter with a max-attempt cap, and a routing policy "
+                "with explicit criteria plus a safe default when classification "
+                "is unclear.",
+            ],
+        },
+        {
+            "step_id": "s4",
+            "display_order": 4,
+            "instruction": (
+                "Inject throttling against the model and confirm the API returns "
+                "a bounded fallback or explicit error (never a false success), "
+                "with correlated traces across API Gateway, Lambda, and the "
+                "model call."
+            ),
+            "prediction_prompt": (
+                "Predict whether a partial/throttled call could slip through as " "an HTTP 200."
+            ),
+            "mandatory": True,
+            "reflection": (
+                "Could you reconstruct the throttled request end to end from the "
+                "correlation ID? Note any missing trace hop."
+            ),
+            "hints": [
+                "A throttled or partial result must be an explicit error or safe "
+                "fallback, not a 200.",
+                "Correlate traces with one ID across API Gateway, Lambda, and the " "model call.",
+                "Verify the retry cap engaged and the fallback fired under " "throttling.",
+                "Prove bounded failure: under throttling the API falls back or "
+                "errors explicitly, retries stay capped, and the correlation ID "
+                "reconstructs the whole request. No false success.",
+            ],
+        },
+        {
+            "step_id": "s5",
+            "display_order": 5,
+            "instruction": (
+                "Clean up: delete the API, the Lambda, and the queue. Re-list "
+                "APIs to confirm the API no longer exists."
+            ),
+            "prediction_prompt": ("Which resource keeps billing if forgotten after this lab?"),
+            "mandatory": True,
+            "reflection": (
+                "Did you remove all three resources? Note the deletion order and " "any dependency."
+            ),
+            "hints": [
+                "A clicked delete is not proof; confirm absence.",
+                "Delete the API first, then the Lambda, then the queue.",
+                "Check for any stage/deployment that keeps the API reachable.",
+                "After deletion, re-list APIs and confirm yours is absent. The "
+                "cleanup checkpoint verifies only on observed absence.",
+            ],
+        },
+    ],
+    "checkpoints": [
+        {
+            "checkpoint_id": "c1-api-present",
+            "label": "API endpoint created",
+            "step_id": "s1",
+            "validator_id": "apigateway-api-present",
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c2-throttle-fallback",
+            "label": "Bounded fallback under throttling proven",
+            "step_id": "s4",
+            "validator_id": None,
+            "is_cleanup": False,
+            "mandatory": True,
+        },
+        {
+            "checkpoint_id": "c3-api-removed",
+            "label": "API endpoint removed",
+            "step_id": "s5",
+            "validator_id": "apigateway-api-absent",
+            "is_cleanup": True,
+            "mandatory": True,
+        },
+    ],
+}
+
+
+_AUTHORED_LABS: tuple[dict[str, Any], ...] = (
+    _LAB_1,
+    _LAB_2,
+    _LAB_3,
+    _LAB_4,
+    _LAB_6,
+    _LAB_7,
+)
 
 
 def build_authored_labs() -> list[dict[str, Any]]:
-    """Return authored labs 1-4 in ingestion shape."""
+    """Return the authored labs in ingestion shape."""
     return [dict(lab) for lab in _AUTHORED_LABS]
 
 
