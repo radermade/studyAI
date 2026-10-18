@@ -9,8 +9,15 @@ from study_core.bootstrap import StudyRuntime
 from study_core.lab_models import CheckpointState
 from study_core.lab_service import LabPreconditionError, LabValidationError
 
-from app.components import empty_state, error_state, offline_notice
-from app.theme import StatusTone, status_label
+from app.components import (
+    architecture_diagram,
+    empty_state,
+    error_state,
+    offline_notice,
+    pane_layout,
+    status_badge,
+)
+from app.theme import StatusTone
 
 _RUN_KEY = "lab_run_id"
 
@@ -71,10 +78,16 @@ def _render_start(runtime: StudyRuntime, learner: str, lab_id: str) -> None:
 
 def _render_workspace(runtime: StudyRuntime) -> None:
     run_id = st.session_state[_RUN_KEY]
-    instructions, workspace = st.columns([3, 2])
+    instructions, workspace = pane_layout("lab")
 
     with instructions:
         st.markdown("**Instructions**")
+        architecture_diagram(
+            "flowchart LR\n  P[Prompt] --> A[Model A]\n  P --> B[Model B]\n"
+            "  A --> C[Compare quality/latency/cost]\n  B --> C",
+            "One prompt is sent to two Bedrock models; their quality, latency, and "
+            "cost are compared to choose the better fit.",
+        )
         st.write("1. Confirm model access in the AWS Console.")
         st.write("2. Invoke two models with the same prompt and record results.")
         st.link_button("Open AWS Console (new tab)", _CONSOLE_URL)
@@ -85,22 +98,41 @@ def _render_workspace(runtime: StudyRuntime) -> None:
         _render_checkpoints(runtime, run_id)
 
 
+_HINT_TEXT: dict[int, str] = {
+    1: "Think about which comparison dimensions actually decide the choice.",
+    2: "Look at the Bedrock model catalog and the InvokeModel latency/pricing data.",
+    3: "Invoke both models with identical input and capture tokens, time, and cost.",
+    4: "Pick the model meeting the quality floor at the lowest latency-adjusted cost; "
+    "record the measured numbers as your rationale.",
+}
+_HINT_TITLES: dict[int, str] = {
+    1: "1. Conceptual nudge",
+    2: "2. Service/architecture area",
+    3: "3. Procedural guidance",
+    4: "4. Full solution (marks run assisted)",
+}
+_REVEALED_KEY = "lab_hint_revealed"
+
+
 def _render_hints(runtime: StudyRuntime, run_id: str) -> None:
     st.markdown("**Hints**")
-    level = st.radio(
-        "Reveal hint level",
-        options=[1, 2, 3, 4],
-        format_func=lambda n: {
-            1: "1. Conceptual nudge",
-            2: "2. Service/architecture area",
-            3: "3. Procedural guidance",
-            4: "4. Full solution (marks run assisted)",
-        }[n],
-        key="lab_hint_level",
-    )
-    if st.button("Reveal hint", key="lab_hint_reveal"):
-        runtime.labs.reveal_hint(run_id=run_id, step_id="s2", level=int(level))
-        st.info(f"Hint {level} recorded.")
+    revealed = int(st.session_state.get(_REVEALED_KEY, 0))
+
+    # Progressive ladder: only the next level can be revealed, in order.
+    for level in range(1, revealed + 1):
+        st.write(f"**{_HINT_TITLES[level]}**")
+        st.caption(_HINT_TEXT[level])
+
+    if revealed < 4:
+        next_level = revealed + 1
+        warn = " This marks the run as assisted." if next_level == 4 else ""
+        if st.button(f"Reveal hint {next_level}.{warn}", key="lab_hint_reveal"):
+            # Persist the reveal before showing content.
+            runtime.labs.reveal_hint(run_id=run_id, step_id="s2", level=next_level)
+            st.session_state[_REVEALED_KEY] = next_level
+            st.rerun()
+    else:
+        st.caption("All hints revealed. This run counts as assisted.")
 
 
 def _render_checkpoints(runtime: StudyRuntime, run_id: str) -> None:
@@ -108,8 +140,8 @@ def _render_checkpoints(runtime: StudyRuntime, run_id: str) -> None:
     states = {cp.checkpoint_id: cp.state for cp in runtime.labs.checkpoint_states(run_id)}
     c1 = states.get("c1-model-access", CheckpointState.NOT_STARTED)
     c2 = states.get("c2-comparison-recorded", CheckpointState.NOT_STARTED)
-    st.write(status_label(_STATE_TONE[c1], f"Model access: {c1.value}"))
-    st.write(status_label(_STATE_TONE[c2], f"Comparison recorded: {c2.value}"))
+    status_badge(_STATE_TONE[c1], f"Model access: {c1.value}")
+    status_badge(_STATE_TONE[c2], f"Comparison recorded: {c2.value}")
 
     if runtime.labs is not None and st.button("Check model access (read-only)", key="lab_check"):
         try:

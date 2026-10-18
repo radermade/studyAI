@@ -5,7 +5,6 @@ from __future__ import annotations
 import sqlite3
 
 import pytest
-
 from study_aws.validators import FakeValidator
 from study_core.lab_models import CheckpointState, EvidenceKind
 from study_core.lab_service import (
@@ -36,9 +35,7 @@ def _start(service: LabService) -> str:
     return run.run_id
 
 
-def test_start_requires_acknowledgements(
-    connection: sqlite3.Connection, clock: FakeClock
-) -> None:
+def test_start_requires_acknowledgements(connection: sqlite3.Connection, clock: FakeClock) -> None:
     service = _lab_service(connection, clock, EvidenceKind.RESOURCE_PRESENT)
     with pytest.raises(LabPreconditionError):
         service.start_lab(
@@ -80,9 +77,7 @@ def test_start_is_idempotent(connection: sqlite3.Connection, clock: FakeClock) -
     assert a == b.run_id
 
 
-def test_check_present_evidence_verifies(
-    connection: sqlite3.Connection, clock: FakeClock
-) -> None:
+def test_check_present_evidence_verifies(connection: sqlite3.Connection, clock: FakeClock) -> None:
     service = _lab_service(connection, clock, EvidenceKind.RESOURCE_PRESENT)
     run_id = _start(service)
     view = service.check(run_id=run_id, checkpoint_id="c1-model-access", event_id="chk1")
@@ -104,13 +99,11 @@ def test_self_report_cannot_verify(connection: sqlite3.Connection, clock: FakeCl
     view = service.record_self_report(
         run_id=run_id, checkpoint_id="c2-comparison-recorded", event_id="sr1"
     )
+    # A self-report lands in SELF_REPORTED and can never be VERIFIED.
     assert view.state == CheckpointState.SELF_REPORTED
-    assert view.state != CheckpointState.VERIFIED
 
 
-def test_check_without_validator_rejected(
-    connection: sqlite3.Connection, clock: FakeClock
-) -> None:
+def test_check_without_validator_rejected(connection: sqlite3.Connection, clock: FakeClock) -> None:
     service = LabService(connection, clock, validator=None)
     run_id = _start(service)
     with pytest.raises(LabValidationError):

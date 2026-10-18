@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from study_aws.validators import VALIDATOR_ALLOWLIST, AwsReadOnlyValidator, FakeValidator
 from study_core.errors import SecurityPolicyError
 from study_core.lab_models import EvidenceKind, ValidationRequest
@@ -22,9 +21,7 @@ def test_unknown_validator_refused() -> None:
 
 def test_fake_validator_returns_requested_kind() -> None:
     fake = FakeValidator(EvidenceKind.RESOURCE_ABSENT)
-    evidence = fake.validate(
-        ValidationRequest(validator_id="s3-bucket-absent", region="us-east-1")
-    )
+    evidence = fake.validate(ValidationRequest(validator_id="s3-bucket-absent", region="us-east-1"))
     assert evidence.kind == EvidenceKind.RESOURCE_ABSENT
 
 

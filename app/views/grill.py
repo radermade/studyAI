@@ -44,14 +44,14 @@ def render(runtime: StudyRuntime, learner: str) -> None:
     st.markdown(f"**{question['prompt']}**")
     st.caption(f"Objectives: {', '.join(question['objective_ids'])}")
     choice = st.radio(
-        "Your answer",
+        "Select the best answer",
         options=[o["option_id"] for o in question["options"]],
         format_func=lambda oid: next(
             o["text"] for o in question["options"] if o["option_id"] == oid
         ),
         key=f"grill_choice_{question['question_id']}",
     )
-    confidence = st.slider("Confidence", 0, 100, 50, key="grill_conf")
+    confidence = st.slider("How confident are you? (0-100)", 0, 100, 50, key="grill_conf")
 
     if st.button("Submit answer", key="grill_submit"):
         _grade(runtime, question, choice, confidence)
