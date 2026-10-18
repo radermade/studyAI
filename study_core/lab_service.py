@@ -8,12 +8,11 @@ outside any transaction, then commit the evidence and legal state transition.
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from collections.abc import Sequence
 
 from study_core.artifacts import content_hash
-from study_core.db import immediate_transaction
+from study_core.db import DbConnection, immediate_transaction
 from study_core.errors import ConflictError, Phase0Error
 from study_core.lab_models import (
     CheckpointState,
@@ -27,8 +26,10 @@ from study_core.lab_models import (
     evidence_establishes_cleanup,
     evidence_establishes_verified,
 )
+from study_core.machines import CHECKPOINT_MACHINE, LAB_RUN_MACHINE
 from study_core.ports import Clock
 from study_core.service import NotFoundError
+from study_core.state_machine import IllegalTransitionError
 
 MAX_HINT_LEVEL = 4
 
@@ -46,7 +47,7 @@ class LabService:
 
     def __init__(
         self,
-        conn: sqlite3.Connection,
+        conn: DbConnection,
         clock: Clock,
         validator: ReadOnlyValidator | None = None,
     ) -> None:
@@ -221,7 +222,13 @@ class LabService:
                     completed.isoformat(),
                 ),
             )
-            view = self._write_state(run_id, checkpoint_id, target, completed.isoformat())
+            view = self._write_state(
+                run_id,
+                checkpoint_id,
+                target,
+                completed.isoformat(),
+                evidence_kind=evidence.kind,
+            )
             self._record_idempotent(event_id, "check", payload_hash, view.model_dump_json())
         return view
 
@@ -250,8 +257,8 @@ class LabService:
         existing = self._idempotent_lookup(event_id, "transition", payload_hash)
         if existing is not None:
             return CheckpointView.model_validate_json(existing)
-        if target in (CheckpointState.VERIFIED, CheckpointState.CLEANED_UP):
-            raise LabValidationError(f"{target.value} requires validator evidence")
+        # No evidence_kind is passed here, so the machine's evidence guards block
+        # a self-report path from reaching VERIFIED or CLEANED_UP.
         now = self._clock.now_utc().isoformat()
         with immediate_transaction(self._conn):
             self._conn.execute(
@@ -263,9 +270,37 @@ class LabService:
             self._record_idempotent(event_id, "transition", payload_hash, view.model_dump_json())
         return view
 
+    def _current_checkpoint_state(self, run_id: str, checkpoint_id: str) -> CheckpointState:
+        row = self._conn.execute(
+            "SELECT state FROM checkpoint_state WHERE run_id = ? AND checkpoint_id = ?",
+            (run_id, checkpoint_id),
+        ).fetchone()
+        return CheckpointState(str(row["state"])) if row else CheckpointState.NOT_STARTED
+
     def _write_state(
-        self, run_id: str, checkpoint_id: str, state: CheckpointState, now_iso: str
+        self,
+        run_id: str,
+        checkpoint_id: str,
+        state: CheckpointState,
+        now_iso: str,
+        *,
+        evidence_kind: EvidenceKind | None = None,
     ) -> CheckpointView:
+        # Enforce legality through the declared checkpoint state machine. The
+        # machine is the single authority on which transitions (and evidence)
+        # are allowed; a NOT_STARTED->IN_PROGRESS bootstrap is implicit.
+        current = self._current_checkpoint_state(run_id, checkpoint_id)
+        if current != state:
+            if current == CheckpointState.NOT_STARTED and state != CheckpointState.IN_PROGRESS:
+                # Bootstrap through IN_PROGRESS so entry transitions are explicit.
+                CHECKPOINT_MACHINE.assert_transition(
+                    CheckpointState.NOT_STARTED, CheckpointState.IN_PROGRESS
+                )
+                current = CheckpointState.IN_PROGRESS
+            try:
+                CHECKPOINT_MACHINE.assert_transition(current, state, evidence_kind=evidence_kind)
+            except IllegalTransitionError as exc:
+                raise LabValidationError(str(exc)) from exc
         self._conn.execute(
             "INSERT INTO checkpoint_state (run_id, checkpoint_id, state, updated_at) "
             "VALUES (?, ?, ?, ?) ON CONFLICT(run_id, checkpoint_id) "
@@ -308,18 +343,24 @@ class LabService:
             return LabCompletionView.model_validate_json(existing)
 
         run = self._conn.execute(
-            "SELECT lab_id, full_solution_used FROM lab_runs WHERE run_id = ?", (run_id,)
+            "SELECT lab_id, full_solution_used, state FROM lab_runs WHERE run_id = ?", (run_id,)
         ).fetchone()
         if run is None:
             raise NotFoundError(f"unknown lab run {run_id}")
         lab_id = str(run["lab_id"])
         assisted = bool(run["full_solution_used"])
+        current = LabRunState(str(run["state"]))
 
         unmet = self._unmet_mandatory_checkpoints(run_id, lab_id)
         if unmet:
             raise LabPreconditionError(f"mandatory checkpoints not satisfied: {', '.join(unmet)}")
 
         final = LabRunState.COMPLETED_ASSISTED if assisted else LabRunState.COMPLETED_INDEPENDENT
+        # Validate the lifecycle transition through the declared machine.
+        try:
+            LAB_RUN_MACHINE.assert_transition(current, final)
+        except IllegalTransitionError as exc:
+            raise LabPreconditionError(str(exc)) from exc
         view = LabCompletionView(run_id=run_id, state=final, independent=not assisted)
         now = self._clock.now_utc().isoformat()
         with immediate_transaction(self._conn):

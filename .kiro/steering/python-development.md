@@ -29,6 +29,21 @@ fileMatchPattern: "**/*.py"
 - Represent persistence and verification state explicitly; never infer `verified` from a truthy string or UI click.
 - Keep unanswered question DTOs structurally incapable of carrying answer keys or rubrics.
 
+## State machines (the standard for stateful entities)
+
+- Every stateful entity is a `StrEnum` of states with a declared `StateMachine`
+  in `study_core/machines.py`. This is the single source of truth for legal
+  transitions; do not scatter transition rules across services.
+- Route every non-trivial state change through the machine's
+  `assert_transition(...)`; translate `IllegalTransitionError` to a typed
+  domain error at the service boundary.
+- Encode conditional transitions (for example, evidence-gated ones) as guard
+  predicates on the machine, not as ad hoc `if` checks in the caller.
+- Mark terminal states explicitly so completed/abandoned entities cannot be
+  resurrected.
+- The state-machine primitive is standard-library only; do not add a FSM
+  dependency without a measured need.
+
 ## Errors and logging
 
 - Define domain-specific exceptions for validation, not-found, conflict, authorization, external-service, and persistence failures.

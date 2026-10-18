@@ -13,10 +13,14 @@ from typing import Any
 from study_core.common import ALL_TASK_IDS
 
 from content.aip_c01 import build_seed_prompts
+from content.domain1_questions import QUESTIONS as DOMAIN1_QUESTIONS
 
-# Four generic options per question. Option "a" is the keyed-correct answer for
-# every seed prompt; this is deliberately simple scaffolding for the local MVP
-# and is replaced by domain-authored items in Phases 3-7.
+# Objectives that have real authored questions; their generic placeholders are
+# suppressed so the grill serves the genuine Domain 1 items.
+_AUTHORED_OBJECTIVES = {obj for q in DOMAIN1_QUESTIONS for obj in q["objective_ids"]}
+
+# Four generic options per placeholder question (option "a" is keyed-correct).
+# Placeholders remain only for objectives without authored content yet.
 _OPTIONS: tuple[tuple[str, str], ...] = (
     ("a", "Choose the design that directly satisfies the stated constraint."),
     ("b", "Choose a design that ignores the decisive constraint."),
@@ -25,21 +29,49 @@ _OPTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _is_placeholder_for_authored(objective_ids: tuple[str, ...]) -> bool:
+    """True when a placeholder prompt targets an objective that now has real content."""
+    return all(obj in _AUTHORED_OBJECTIVES for obj in objective_ids)
+
+
+def build_rich_questions() -> list[dict[str, Any]]:
+    """Return the authored Domain 1 questions in ingestion shape."""
+    return DOMAIN1_QUESTIONS
+
+
 def build_question_options() -> dict[str, tuple[tuple[str, str], ...]]:
-    """Return option sets keyed by question ID."""
-    return {prompt.question_id: _OPTIONS for prompt in build_seed_prompts()}
+    """Return option sets keyed by question ID (placeholders + authored)."""
+    options: dict[str, tuple[tuple[str, str], ...]] = {}
+    for prompt in build_seed_prompts():
+        if _is_placeholder_for_authored(prompt.objective_ids):
+            continue
+        options[prompt.question_id] = _OPTIONS
+    for question in DOMAIN1_QUESTIONS:
+        options[question["question_id"]] = tuple((oid, text) for oid, text in question["options"])
+    return options
 
 
 def build_answer_material() -> dict[str, dict[str, Any]]:
-    """Return private answer material keyed by question ID."""
+    """Return private answer material keyed by question ID (placeholders + authored)."""
     material: dict[str, dict[str, Any]] = {}
     for prompt in build_seed_prompts():
+        if _is_placeholder_for_authored(prompt.objective_ids):
+            continue
         material[prompt.question_id] = {
             "correct_option_ids": ["a"],
             "rubric": (
                 "Credit the response that names the decisive constraint and the "
                 "trade-off that rules out the alternatives."
             ),
+            "explanation": "",
+            "rationales": {},
+        }
+    for question in DOMAIN1_QUESTIONS:
+        material[question["question_id"]] = {
+            "correct_option_ids": question["correct_option_ids"],
+            "rubric": question["explanation"],
+            "explanation": question["explanation"],
+            "rationales": question["rationales"],
         }
     return material
 

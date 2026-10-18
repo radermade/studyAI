@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -15,11 +14,14 @@ from content.phase1_seed import (
     build_curriculum,
     build_lab_definitions,
     build_question_options,
+    build_rich_questions,
 )
 from scripts.phase0 import assemble_inputs
-from study_core.db import apply_migrations, connect
+from study_core.db import DbConnection, apply_migrations, connect
 from study_core.handoff import build_handoff, evaluate_phase0
 from study_core.ingestion import ingest_handoff
+from study_core.ports import SystemRandom
+from study_core.scored_service import ScoredSessionService
 from study_core.service import StudyService
 
 
@@ -51,7 +53,7 @@ def db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def connection(db_path: Path) -> Iterator[sqlite3.Connection]:
+def connection(db_path: Path) -> Iterator[DbConnection]:
     conn = connect(db_path, 5000)
     now_iso = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
     apply_migrations(conn, now_iso=now_iso)
@@ -67,6 +69,7 @@ def connection(db_path: Path) -> Iterator[sqlite3.Connection]:
         content_units=build_content_units(),
         curriculum=build_curriculum(),
         labs=build_lab_definitions(),
+        rich_questions=build_rich_questions(),
     )
     yield conn
     conn.close()
@@ -78,10 +81,16 @@ def clock() -> FakeClock:
 
 
 @pytest.fixture
-def service(connection: sqlite3.Connection, clock: FakeClock) -> StudyService:
+def service(connection: DbConnection, clock: FakeClock) -> StudyService:
     return StudyService(
         connection,
         clock,
         FirstChoiceRandom(),
         blueprint_version=BLUEPRINT_VERSION,
     )
+
+
+@pytest.fixture
+def scored(connection: DbConnection, clock: FakeClock) -> ScoredSessionService:
+    # Seeded random for deterministic selection in tests.
+    return ScoredSessionService(connection, clock, SystemRandom(seed=1))

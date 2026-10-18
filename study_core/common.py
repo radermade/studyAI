@@ -7,7 +7,10 @@ smuggle unexpected data.
 
 from __future__ import annotations
 
+import hashlib
+import random
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -54,6 +57,20 @@ def domain_of(task_id: str) -> int:
 def utc_now() -> datetime:
     """Return the current timezone-aware UTC instant."""
     return datetime.now(tz=UTC)
+
+
+def stable_shuffle[T](items: Sequence[T], *, seed_key: str) -> list[T]:
+    """Return a deterministic shuffle of items keyed by a stable string.
+
+    The order is stable for a given `seed_key` (so re-rendering the same item
+    does not reshuffle) but varies across different keys. Used to randomize
+    answer-option order so the correct answer is not positionally predictable.
+    """
+    digest = hashlib.sha256(seed_key.encode("utf-8")).hexdigest()
+    rng = random.Random(int(digest, 16))
+    shuffled = list(items)
+    rng.shuffle(shuffled)
+    return shuffled
 
 
 def ensure_utc(value: datetime) -> datetime:

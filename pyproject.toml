@@ -39,6 +39,10 @@ src = ["study_core", "study_mcp", "study_aws", "app", "content", "scripts", "tes
 # would break validation.
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# Authored question/answer prose: long option and rationale strings are allowed.
+"content/domain1_questions.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

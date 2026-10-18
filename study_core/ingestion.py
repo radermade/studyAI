@@ -9,16 +9,15 @@ Re-ingesting an identical blueprint version is idempotent.
 from __future__ import annotations
 
 import json
-import sqlite3
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from study_core.artifacts import ArtifactEnvelope
-from study_core.db import immediate_transaction
+from study_core.db import DbConnection, immediate_transaction
 
 
 def ingest_handoff(
-    conn: sqlite3.Connection,
+    conn: DbConnection,
     handoff: ArtifactEnvelope,
     *,
     now_iso: str,
@@ -27,6 +26,7 @@ def ingest_handoff(
     content_units: Sequence[Mapping[str, Any]] | None = None,
     curriculum: Sequence[Mapping[str, Any]] | None = None,
     labs: Sequence[Mapping[str, Any]] | None = None,
+    rich_questions: Sequence[Mapping[str, Any]] | None = None,
 ) -> None:
     """Ingest an accepted Phase 0 handoff into the database idempotently.
 
@@ -59,14 +59,13 @@ def ingest_handoff(
         _ingest_safety(conn, safety, now_iso)
         _ingest_baseline(conn, baseline, now_iso)
         _ingest_questions(conn, seed, now_iso, answer_material or {}, question_options or {})
+        _ingest_rich_questions(conn, rich_questions or (), now_iso)
         _ingest_content(conn, content_units or (), now_iso)
         _ingest_curriculum(conn, curriculum or ())
         _ingest_labs(conn, labs or ())
 
 
-def _ingest_domains(
-    conn: sqlite3.Connection, domains: Sequence[Mapping[str, Any]], version: str
-) -> None:
+def _ingest_domains(conn: DbConnection, domains: Sequence[Mapping[str, Any]], version: str) -> None:
     for domain in domains:
         conn.execute(
             "INSERT OR IGNORE INTO domains (domain_id, blueprint_version, title, weight_percent) "
@@ -81,7 +80,7 @@ def _ingest_domains(
 
 
 def _ingest_objectives(
-    conn: sqlite3.Connection, objectives: Sequence[Mapping[str, Any]], version: str
+    conn: DbConnection, objectives: Sequence[Mapping[str, Any]], version: str
 ) -> None:
     for objective in objectives:
         conn.execute(
@@ -97,9 +96,7 @@ def _ingest_objectives(
         )
 
 
-def _ingest_sources(
-    conn: sqlite3.Connection, sources: Sequence[Mapping[str, Any]], version: str
-) -> None:
+def _ingest_sources(conn: DbConnection, sources: Sequence[Mapping[str, Any]], version: str) -> None:
     for source in sources:
         conn.execute(
             "INSERT OR IGNORE INTO sources (source_id, blueprint_version, url, title, "
@@ -117,7 +114,7 @@ def _ingest_sources(
         )
 
 
-def _ingest_profile(conn: sqlite3.Connection, profile: Mapping[str, Any], now_iso: str) -> None:
+def _ingest_profile(conn: DbConnection, profile: Mapping[str, Any], now_iso: str) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO learner_profiles (learner_id, profile_version, weekly_hours, "
         "experience, target_region, account_type, lab_budget_usd, exam_date, "
@@ -137,7 +134,7 @@ def _ingest_profile(conn: sqlite3.Connection, profile: Mapping[str, Any], now_is
     )
 
 
-def _ingest_safety(conn: sqlite3.Connection, safety: Mapping[str, Any], now_iso: str) -> None:
+def _ingest_safety(conn: DbConnection, safety: Mapping[str, Any], now_iso: str) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO safety_policies (policy_version, payload_json, ingested_at) "
         "VALUES (?, ?, ?)",
@@ -145,7 +142,7 @@ def _ingest_safety(conn: sqlite3.Connection, safety: Mapping[str, Any], now_iso:
     )
 
 
-def _ingest_baseline(conn: sqlite3.Connection, baseline: Mapping[str, Any], now_iso: str) -> None:
+def _ingest_baseline(conn: DbConnection, baseline: Mapping[str, Any], now_iso: str) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO baseline_summaries (run_id, learner_id, complete, "
         "answered_count, unanswered_count, mean_confidence, ingested_at) "
@@ -163,7 +160,7 @@ def _ingest_baseline(conn: sqlite3.Connection, baseline: Mapping[str, Any], now_
 
 
 def _ingest_questions(
-    conn: sqlite3.Connection,
+    conn: DbConnection,
     seed: Sequence[Mapping[str, Any]],
     now_iso: str,
     answer_material: Mapping[str, Mapping[str, Any]],
@@ -171,6 +168,10 @@ def _ingest_questions(
 ) -> None:
     for prompt in seed:
         question_id = str(prompt["question_id"])
+        # Skip placeholder prompts whose options were suppressed (their objective
+        # now has authored questions). A selectable question must have options.
+        if question_id not in question_options:
+            continue
         source_ids = list(prompt["source_ids"])
         conn.execute(
             "INSERT OR IGNORE INTO questions (question_id, prompt, scenario_constraint, "
@@ -202,18 +203,76 @@ def _ingest_questions(
         material = answer_material.get(question_id)
         if material is not None:
             conn.execute(
-                "INSERT OR IGNORE INTO answer_material (question_id, correct_option_ids, rubric) "
-                "VALUES (?, ?, ?)",
+                "INSERT OR IGNORE INTO answer_material "
+                "(question_id, correct_option_ids, rubric, explanation) "
+                "VALUES (?, ?, ?, ?)",
                 (
                     question_id,
                     json.dumps(list(material["correct_option_ids"])),
                     str(material["rubric"]),
+                    str(material.get("explanation", "")),
                 ),
+            )
+            for option_id, (is_correct, rationale) in material.get("rationales", {}).items():
+                conn.execute(
+                    "INSERT OR IGNORE INTO option_rationales "
+                    "(question_id, option_id, is_correct, rationale) VALUES (?, ?, ?, ?)",
+                    (question_id, str(option_id), 1 if is_correct else 0, str(rationale)),
+                )
+
+
+def _ingest_rich_questions(
+    conn: DbConnection, questions: Sequence[Mapping[str, Any]], now_iso: str
+) -> None:
+    """Ingest authored questions with options, answer keys, and explanations."""
+    for question in questions:
+        question_id = str(question["question_id"])
+        conn.execute(
+            "INSERT OR IGNORE INTO questions (question_id, prompt, scenario_constraint, "
+            "difficulty, question_format, source_ids, review_status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'reviewed', ?)",
+            (
+                question_id,
+                str(question["prompt"]),
+                str(question["scenario_constraint"]),
+                str(question["difficulty"]),
+                "multiple_choice",
+                json.dumps(list(question.get("source_ids", ["aip-c01-domain-1"]))),
+                now_iso,
+            ),
+        )
+        for objective_id in question["objective_ids"]:
+            conn.execute(
+                "INSERT OR IGNORE INTO question_objectives (question_id, objective_id) "
+                "VALUES (?, ?)",
+                (question_id, str(objective_id)),
+            )
+        for option_id, text in question["options"]:
+            conn.execute(
+                "INSERT OR IGNORE INTO question_options (question_id, option_id, text) "
+                "VALUES (?, ?, ?)",
+                (question_id, str(option_id), str(text)),
+            )
+        conn.execute(
+            "INSERT OR IGNORE INTO answer_material "
+            "(question_id, correct_option_ids, rubric, explanation) VALUES (?, ?, ?, ?)",
+            (
+                question_id,
+                json.dumps(list(question["correct_option_ids"])),
+                str(question["explanation"]),
+                str(question["explanation"]),
+            ),
+        )
+        for option_id, (is_correct, rationale) in question["rationales"].items():
+            conn.execute(
+                "INSERT OR IGNORE INTO option_rationales "
+                "(question_id, option_id, is_correct, rationale) VALUES (?, ?, ?, ?)",
+                (question_id, str(option_id), 1 if is_correct else 0, str(rationale)),
             )
 
 
 def _ingest_content(
-    conn: sqlite3.Connection, content_units: Sequence[Mapping[str, Any]], now_iso: str
+    conn: DbConnection, content_units: Sequence[Mapping[str, Any]], now_iso: str
 ) -> None:
     for unit in content_units:
         content_id = str(unit["content_id"])
@@ -254,7 +313,7 @@ def _ingest_content(
         )
 
 
-def _ingest_curriculum(conn: sqlite3.Connection, items: Sequence[Mapping[str, Any]]) -> None:
+def _ingest_curriculum(conn: DbConnection, items: Sequence[Mapping[str, Any]]) -> None:
     for item in items:
         conn.execute(
             "INSERT OR IGNORE INTO curriculum_items (item_id, item_type, title, display_order, "
@@ -271,7 +330,7 @@ def _ingest_curriculum(conn: sqlite3.Connection, items: Sequence[Mapping[str, An
         )
 
 
-def _ingest_labs(conn: sqlite3.Connection, labs: Sequence[Mapping[str, Any]]) -> None:
+def _ingest_labs(conn: DbConnection, labs: Sequence[Mapping[str, Any]]) -> None:
     for lab in labs:
         lab_id = str(lab["lab_id"])
         conn.execute(

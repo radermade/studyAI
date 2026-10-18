@@ -44,6 +44,23 @@ class SequenceRandom:
         return 0
 
 
+class SystemRandom:
+    """A real random source for scored-session variety.
+
+    Uses `random.Random`; pass a seed for reproducibility in tests.
+    """
+
+    def __init__(self, seed: int | None = None) -> None:
+        import random
+
+        self._rng = random.Random(seed)
+
+    def choose_index(self, upper_bound: int) -> int:
+        if upper_bound <= 0:
+            raise ValueError("upper_bound must be positive")
+        return self._rng.randrange(upper_bound)
+
+
 # ---------------------------------------------------------------------------
 # Reserved Phase 2 ports. Declared here so Phase 2 extends stable contracts.
 # Phase 1 never instantiates these and never reports verification.

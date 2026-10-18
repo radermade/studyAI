@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
-from study_core.ui_state import ContentStatus, CurriculumItem, UiStateService
 
 from app.theme import (
     DEFAULT_PANE_PRESET,
@@ -14,40 +13,10 @@ from app.theme import (
     status_label,
 )
 
-_STATUS_TONE: dict[ContentStatus, StatusTone] = {
-    ContentStatus.NOT_STARTED: StatusTone.NEUTRAL,
-    ContentStatus.IN_PROGRESS: StatusTone.PROGRESS,
-    ContentStatus.COMPLETE: StatusTone.SUCCESS,
-}
-
 
 def status_badge(tone: StatusTone, text: str) -> None:
     """Render an accessible status badge (color + icon + word + text)."""
     st.markdown(status_badge_html(tone, text), unsafe_allow_html=True)
-
-
-def curriculum_rail(ui: UiStateService, learner: str, *, due_count: int) -> None:
-    """Render the collapsible curriculum rail with status and due-review badge."""
-    with st.sidebar:
-        st.caption(f"Due reviews: {due_count}")
-        statuses = ui.content_status(learner)
-        completed = {k for k, v in statuses.items() if v == ContentStatus.COMPLETE}
-        for item in ui.list_curriculum():
-            status = statuses.get(item.item_id, ContentStatus.NOT_STARTED)
-            missing = _missing_prerequisites(item, completed)
-            if missing:
-                tone = StatusTone.WARNING
-                label = f"{item.title} (locked)"
-            else:
-                tone = _STATUS_TONE[status]
-                label = item.title
-            status_badge(tone, label)
-            if missing:
-                st.caption(f"Requires: {', '.join(missing)}")
-
-
-def _missing_prerequisites(item: CurriculumItem, completed: set[str]) -> list[str]:
-    return [prereq for prereq in item.prerequisites if prereq not in completed]
 
 
 def pane_layout(key: str) -> tuple[DeltaGenerator, DeltaGenerator]:

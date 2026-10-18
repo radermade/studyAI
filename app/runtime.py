@@ -29,7 +29,10 @@ def get_runtime() -> StudyRuntime:
         return cached  # type: ignore[no-any-return]
     validator = _build_validator()
     runtime = build_runtime(
-        Settings.from_env(), blueprint_version=BLUEPRINT_VERSION, validator=validator
+        Settings.from_env(),
+        blueprint_version=BLUEPRINT_VERSION,
+        validator=validator,
+        allow_cross_thread=True,
     )
     st.session_state[_RUNTIME_KEY] = runtime
     return runtime

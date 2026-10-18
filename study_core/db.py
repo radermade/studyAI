@@ -9,23 +9,75 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Protocol
 
 from study_core.errors import PersistenceError
 
 MIGRATIONS_DIR = Path("migrations")
 
 
-def connect(database_path: Path, busy_timeout_ms: int) -> sqlite3.Connection:
+class DbConnection(Protocol):
+    """Minimal connection surface used by the study services and migrations."""
+
+    def execute(self, sql: str, parameters: Any = ...) -> sqlite3.Cursor: ...
+
+    def executescript(self, sql: str) -> sqlite3.Cursor: ...
+
+    def close(self) -> None: ...
+
+
+class LockedConnection:
+    """A thread-safe proxy over a SQLite connection.
+
+    Streamlit may run script reruns on different worker threads. This proxy
+    permits cross-thread use (`check_same_thread=False`) while serializing all
+    access through a single lock, so operations never interleave. It exposes
+    only the methods the study services and migration runner use.
+    """
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self._conn = conn
+        self._lock = threading.RLock()
+
+    def execute(self, sql: str, parameters: Any = ()) -> sqlite3.Cursor:
+        with self._lock:
+            return self._conn.execute(sql, parameters)
+
+    def executescript(self, sql: str) -> sqlite3.Cursor:
+        with self._lock:
+            return self._conn.executescript(sql)
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
+
+
+def connect(
+    database_path: Path,
+    busy_timeout_ms: int,
+    *,
+    allow_cross_thread: bool = False,
+) -> DbConnection:
     """Open a SQLite connection with foreign keys, WAL, and a busy timeout.
+
+    Args:
+        allow_cross_thread: when True, allow the connection to be used from
+            threads other than the one that created it. Streamlit reruns the
+            script on different worker threads, so the single-user app sets
+            this and serializes access with a lock. Defaults to False for the
+            strict single-thread behavior used by the CLI and tests.
 
     Raises:
         PersistenceError: when foreign-key enforcement cannot be verified.
     """
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(database_path, isolation_level=None)
+    conn = sqlite3.connect(
+        database_path, isolation_level=None, check_same_thread=not allow_cross_thread
+    )
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
@@ -34,24 +86,33 @@ def connect(database_path: Path, busy_timeout_ms: int) -> sqlite3.Connection:
     if enabled is None or int(enabled[0]) != 1:
         conn.close()
         raise PersistenceError("foreign keys could not be enabled on the connection")
-    return conn
+    return LockedConnection(conn) if allow_cross_thread else conn
 
 
 @contextmanager
-def immediate_transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
+def immediate_transaction(conn: DbConnection) -> Iterator[DbConnection]:
     """Run a short write transaction using BEGIN IMMEDIATE.
 
     Commits on success and rolls back on any exception. No external (AWS or
     model) call belongs inside this block.
     """
-    conn.execute("BEGIN IMMEDIATE")
+    # Hold the connection lock (if any) across the whole transaction so no other
+    # thread can interleave between BEGIN and COMMIT.
+    lock = getattr(conn, "_lock", None)
+    if lock is not None:
+        lock.acquire()
     try:
-        yield conn
-    except BaseException:
-        conn.execute("ROLLBACK")
-        raise
-    else:
-        conn.execute("COMMIT")
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            yield conn
+        except BaseException:
+            conn.execute("ROLLBACK")
+            raise
+        else:
+            conn.execute("COMMIT")
+    finally:
+        if lock is not None:
+            lock.release()
 
 
 def _checksum(text: str) -> str:
@@ -69,7 +130,7 @@ def _discover_migrations(migrations_dir: Path) -> list[tuple[int, Path]]:
     return found
 
 
-def _ensure_migrations_table(conn: sqlite3.Connection) -> None:
+def _ensure_migrations_table(conn: DbConnection) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -83,7 +144,7 @@ def _ensure_migrations_table(conn: sqlite3.Connection) -> None:
 
 
 def apply_migrations(
-    conn: sqlite3.Connection,
+    conn: DbConnection,
     migrations_dir: Path = MIGRATIONS_DIR,
     *,
     now_iso: str,

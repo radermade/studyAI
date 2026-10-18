@@ -7,11 +7,10 @@ meaningful progress through SQLite so a rerun or refresh never loses it.
 from __future__ import annotations
 
 import json
-import sqlite3
 from enum import StrEnum
 
 from study_core.common import StrictModel
-from study_core.db import immediate_transaction
+from study_core.db import DbConnection, immediate_transaction
 from study_core.ports import Clock
 
 
@@ -46,7 +45,7 @@ class ResumeState(StrictModel):
 class UiStateService:
     """Durable curriculum, progress, notes, and resume operations."""
 
-    def __init__(self, conn: sqlite3.Connection, clock: Clock) -> None:
+    def __init__(self, conn: DbConnection, clock: Clock) -> None:
         self._conn = conn
         self._clock = clock
 

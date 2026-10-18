@@ -18,6 +18,29 @@ Create a focused study cockpit that combines:
 
 The platform must cover every task in all five current AIP-C01 content domains. It complements—not replaces—the AWS official pretest, Skill Builder, Builder Labs, Cloud Quest, Jam, SimuLearn, and official practice exam.
 
+### 1.1 Study modes
+
+The learner-facing product is organized around three modes plus hands-on labs:
+
+1. **Grill (practice).** One question at a time with immediate, explained feedback and adaptive selection. No score pressure. Primary daily-practice loop.
+2. **Scored Session (exam simulation).** A timed, officially weighted set of questions that mirrors the AIP-C01 scoring mechanics, withholds feedback until submission, and reports a transparent scaled-score estimate and pass/fail. Supports multiple sessions, reset, and history.
+3. **Review.** Resurfaces exactly what the learner is missing — the incorrect/unanswered items from scored sessions and spaced-repetition items from grill history — so weaknesses can be studied and closed.
+4. **Labs.** Guided, learner-operated AWS Console walkthroughs with read-only validation (unchanged from the lab matrix in section 7).
+
+### 1.2 Scored-session scoring model (official AIP-C01 mechanics)
+
+A full scored session mirrors the official exam as documented in the AWS exam guide:
+
+- **75 questions total: 65 scored, 10 unscored.** Unscored items are mixed in, unmarked, and do not affect the score (they model AWS pretest items).
+- **Question types:** multiple choice (one correct of four) and multiple response (two or more correct of five or more). Multiple response is **all-or-nothing** — every correct option must be selected, with no partial credit.
+- **Unanswered questions are scored as incorrect. There is no penalty for guessing.**
+- **Scaled score 100–1000, pass at 750.** The platform computes a transparent internal estimate from the raw correct count and labels it clearly as an internal estimate, not an official AWS scaled score (AWS's scaling is proprietary and form-specific).
+- **Compensatory scoring:** the overall result determines pass/fail. Per-domain results are shown only as informational strengths/weaknesses, never as per-domain pass gates.
+
+**Scored-session selection:** the scored questions are a random subslice weighted by the official domain percentages (31/26/20/12/11) using largest-remainder rounding, with no repeats within a session, and the 10 unscored items drawn from the pool at randomized unmarked positions.
+
+**Scaling to available content:** the selection engine always targets the official weighting, but a session may be scoped to the domains that currently have authored questions ("all available" by default, or a chosen subset). Within the available/selected domains the official relative weighting is preserved, the session is clearly labeled "not full-length" until all five domains and the full 75-item structure can be met, and the unscored-item count is 0 until the pool is large enough for 65 scored + 10 unscored to be meaningful. No code change is needed for a true full-length session once content exists; only more authored questions.
+
 ## 2. Guiding constraints
 
 1. **Study before platform polish.** Deliver a useful quiz and lab loop quickly; defer optional sophistication.
@@ -369,6 +392,58 @@ Exit gate:
 - The UI clearly distinguishes verified, self-reported, failed, and not-yet-checked steps.
 - No KodeKloud logos, copied screenshots, proprietary wording, or cloned brand styling are present.
 
+**Delivery note (revised):** The workspace shipped and was then refocused per learner
+direction to a four-view app — **Grill, Labs, Review, Progress** — dropping Today, Learn,
+Mock, Knowledge, and the curriculum rail. The lesson-authoring workflow is deferred; the
+daily loop is practice (Grill) and hands-on (Labs), with Review and Progress as adaptive
+support. Thread-safe SQLite access and launch-path resolution were added so the app runs
+reliably under `streamlit run`.
+
+### Phase 2.5 — Scored sessions, scoring, and session management
+
+**Goal:** Give the learner AWS-style scored sessions now — officially weighted question
+selection, exam-accurate scoring mechanics, a transparent scaled-score estimate, review of
+missed items, and full session reset/history — pulled forward from Phase 8 so it is usable
+with the content that exists today and scales automatically as content grows.
+
+Deliverables:
+
+- **Scored-session engine** implementing the section 1.2 scoring model: official
+  31/26/20/12/11 largest-remainder selection, multiple-choice and all-or-nothing
+  multiple-response grading, unanswered-as-incorrect, no guessing penalty, and the
+  65-scored/10-unscored structure (unscored count scales from 0 up with the pool).
+- **Transparent scaled-score estimate** (raw correct, percentage, 100–1000 linear estimate,
+  pass/fail at a 750 equivalent) explicitly labeled an internal estimate, not an AWS score.
+- **Compensatory result** with per-domain informational breakdown, never per-domain gates.
+- **Domain scope picker** defaulting to "all available domains," preserving official
+  relative weighting within the selected/available domains and labeling non-full-length
+  sessions clearly.
+- **Delayed feedback:** no correctness, answer, or explanation shown until submission.
+- **Single-session, non-accumulating state:** scored-session results are temporary and
+  measurable, not an archive. At most one scored session exists at a time; starting or
+  resetting a session clears the prior one. The in-progress session is persisted only so a
+  browser refresh does not lose it mid-exam. There is no long-term session history.
+- **Review integration:** Review surfaces the specific missed/unanswered items and weak
+  objectives from the single most recent scored session, in addition to spaced-repetition
+  items.
+- **Original terminal/ASCII aesthetic:** a monospace, lightly colorful "hackeresque" score
+  readout and session banner that remains WCAG-accessible (status is text+icon, not color
+  alone) and uses original art, not copied trade dress.
+
+Exit gate:
+
+- A scored session selects questions by official weighting (scaled to available domains),
+  grades MC and MR correctly with all-or-nothing MR and unanswered-as-incorrect, and
+  reports a transparent scaled-score estimate and pass/fail labeled as an internal estimate.
+- Feedback is withheld until submission; after submission the learner can review every
+  missed item with its explanation.
+- The learner can reset the active session; starting or resetting clears the prior session
+  so only one scored session's data exists at a time (no accumulating history).
+- The in-progress session survives a browser refresh.
+- Review lists the missed items and weak objectives from the single most recent scored
+  session.
+- Per-domain results are informational only; overall pass/fail uses compensatory scoring.
+
 ### Phase 3 — Domain 1 mastery: models, data, RAG, and prompts
 
 **Goal:** Complete the largest exam domain and establish the knowledge architecture used by later phases.
@@ -460,19 +535,28 @@ Exit gate:
 
 ### Phase 8 — Exam simulation and readiness closure
 
-**Goal:** Convert domain knowledge into reliable timed scenario performance.
+**Goal:** Convert domain knowledge into reliable timed scenario performance and make a
+defensible go/no-go decision before sitting the exam.
+
+**Relationship to Phase 2.5:** Phase 8 reuses the Phase 2.5 scored-session engine
+(selection, grading, scaled-score estimate, session history). Phase 8 adds the heavier
+**readiness-gate** layer on top: fresh-form reservation, two full-length mocks, misconception
+closure, the required lab matrix, and the official-practice/residual-risk review. Phase 2.5
+answers "run a scored session now"; Phase 8 answers "am I ready for the real exam."
 
 Deliverables:
 
-- `/aip-mock` skill and timed mock UI.
-- Blueprint-weighted 75-question sessions with multiple-choice and multiple-response behavior.
-- At least two fresh full mocks with no immediate feedback.
+- `/aip-mock` skill and timed full-length mock UI built on the Phase 2.5 engine.
+- Blueprint-weighted full 75-question sessions (65 scored + 10 unscored) once all five
+  domains have sufficient authored questions.
+- At least two fresh full mocks with no immediate feedback and non-overlapping items.
 - Weakness-directed review plan based on errors, confidence, speed, and lab evidence.
 - Official AWS practice exam and final gap analysis.
 
 Exit gate:
 
-- At least 85% overall and 80% in every domain on two fresh internal timed mocks.
+- At least 85% overall on two fresh internal full-length timed mocks (per-domain shown as
+  informational strengths/weaknesses, consistent with the exam's compensatory scoring).
 - No unresolved high-priority misconception.
 - Required lab matrix is complete and cleanup is verified.
 - Official practice result and remaining risk are reviewed before scheduling or sitting the exam.
@@ -528,12 +612,23 @@ Every lab must include prerequisites, learning objectives, architecture, estimat
 - Checkpoints expose `Not started`, `In progress`, `Self-reported`, `Verified`, `Failed`, and `Cleaned up` states.
 - Hints are progressive: conceptual nudge, service-area hint, procedural hint, then solution with a learning penalty marker.
 
-### Grill and mock modes
+### Grill, scored-session, and mock modes
 
-- Distraction-free question canvas with objective hidden during mocks.
+- Distraction-free question canvas with objective hidden during scored sessions and mocks.
 - Confidence and elapsed time recorded before grading.
 - Grill feedback shows result, missing concept, correct reasoning, distractor analysis, source, and next question.
-- Mock sessions withhold feedback until submission.
+- Scored sessions and mocks withhold all feedback until submission, then show the score
+  readout and a review of every missed item.
+
+### Visual aesthetic (terminal / ASCII)
+
+- The workspace uses an original, lightly colorful "hackeresque" terminal aesthetic:
+  monospace score readouts, an original ASCII-art banner, and bordered terminal-style
+  panes for score summaries and session results.
+- The aesthetic is decorative only and must never carry meaning by color or art alone:
+  every status still pairs an icon and text, WCAG 2.2 AA contrast is preserved, and the
+  ASCII banner has an accessible text equivalent.
+- All art and styling are original; no copied logos, palettes, or trade dress.
 
 ### Originality and accessibility
 

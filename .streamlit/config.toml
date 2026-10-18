@@ -1,0 +1,6 @@
+[browser]
+# Do not collect usage statistics and do not prompt for an email on first run.
+gatherUsageStats = false
+
+[server]
+headless = true

@@ -1,27 +1,35 @@
-"""Streamlit entry point: header, curriculum rail, and eight-view routing.
+"""Streamlit entry point for the focused Grill + Labs workspace.
 
 Run with:
     uv run streamlit run app/main.py
+
+`streamlit run` puts this file's directory (app/) on sys.path rather than the
+project root, so the project root is prepended here before importing project
+packages. This makes the app runnable regardless of launch method.
 """
 
 from __future__ import annotations
 
-import streamlit as st
-from content.aip_c01 import BLUEPRINT_VERSION
+import sys
+from pathlib import Path
 
-from app.components import curriculum_rail
-from app.runtime import get_runtime, learner_id
-from app.theme import BASE_CSS, PRODUCT_NAME
-from app.views import grill, knowledge, labs, learn, mock, progress, review, today
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
+import streamlit as st  # noqa: E402 - import after sys.path setup
+
+from app.runtime import get_runtime, learner_id  # noqa: E402
+from app.theme import BASE_CSS, PRODUCT_NAME  # noqa: E402
+from app.views import grill, labs, progress, review, scored  # noqa: E402
+
+# Focused experience: practice (Grill), exam simulation (Scored Session), and
+# hands-on walkthroughs (Labs). Review and Progress are the adaptive support.
 _VIEWS = {
-    "Today": today.render,
-    "Learn": learn.render,
     "Grill": grill.render,
+    "Scored Session": scored.render,
     "Labs": labs.render,
     "Review": review.render,
-    "Mock": mock.render,
-    "Knowledge": knowledge.render,
     "Progress": progress.render,
 }
 
@@ -35,19 +43,18 @@ def main() -> None:
         runtime = get_runtime()
     except Exception:
         st.error(
-            "The study database is not ready. Run `uv run python -m scripts.phase1 ingest` "
-            "first, then reload."
+            "The study database is not ready. Run "
+            "`uv run python -m scripts.phase1 ingest` first, then reload."
         )
         return
 
     learner = learner_id()
     st.title(PRODUCT_NAME)
-    st.caption(f"Exam: AIP-C01 - Blueprint: {BLUEPRINT_VERSION}")
-
-    view_name = st.sidebar.radio("Navigate", options=list(_VIEWS), key="nav_view")
     due = runtime.service.get_due_reviews(learner_id=learner)
-    curriculum_rail(runtime.ui, learner, due_count=len(due.items))
+    st.caption(f"AWS Certified Generative AI Developer (AIP-C01)  -  Due reviews: {len(due.items)}")
 
+    view_name = st.sidebar.radio("Go to", options=list(_VIEWS), key="nav_view")
+    st.sidebar.caption("Grill = practice.  Scored Session = exam sim.  Labs = AWS walkthroughs.")
     _VIEWS[view_name](runtime, learner)
 
 

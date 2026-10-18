@@ -66,11 +66,11 @@ The server speaks JSON-RPC over stdio and exposes exactly: `start_session`,
 `search_local_material`. No SQL, filesystem, shell, or AWS capability is exposed, and
 unanswered questions never carry answer keys or rubrics.
 
-## Phase 2 — Learning Workspace (the UI)
+## The workspace (the UI)
 
-Phase 2 is the original Streamlit workspace with eight views (Today, Learn, Grill, Labs,
-Review, Mock, Knowledge, Progress), a durable lab lifecycle, and read-only AWS lab
-validation.
+The Streamlit workspace is focused on two things: **Grill** (get quizzed) and **Labs**
+(hands-on AWS walkthroughs), with **Review** and **Progress** as the adaptive support
+that makes grilling target your weak spots.
 
 ### 1. Ingest data (once)
 
@@ -86,16 +86,18 @@ uv run streamlit run app/main.py
 
 Open the printed `Local URL` (default http://localhost:8501). What you can do:
 
-- **Learn:** pick a lesson, read the concept block, take notes, mark complete.
-- **Grill:** start a session and answer one question at a time with confidence; grading,
-  misconceptions, and spaced reviews persist through `study_core`.
-- **Knowledge:** full-text search local sources, filter by objective.
+- **Grill:** start a session and answer one real scenario question at a time with a
+  confidence rating. After you submit, you see which option was correct, a rationale for
+  every option (including why yours was right or wrong), a teaching explanation, and the
+  source. Grading, misconceptions, and spaced reviews persist through `study_core`.
+  Domain 1 (foundation models, RAG, prompts) has authored questions today; the other
+  domains are being filled in.
+- **Labs:** start the Bedrock model-comparison walkthrough, open the AWS Console in a new
+  tab, run a read-only validator check, use the progressive hint ladder, and complete the
+  lab. `Verified` requires validator evidence; `Cleaned up` requires proven absence — a
+  click never establishes either.
+- **Review:** committed due reviews (correct answers schedule future reviews).
 - **Progress:** evidence-based, per-objective view (labeled an internal estimate).
-- **Review:** committed due reviews.
-- **Labs:** start the sample Bedrock lab, open the AWS Console in a new tab, run a
-  read-only validator check, use the progressive hint ladder, and complete the lab.
-  `Verified` requires validator evidence; `Cleaned up` requires proven absence — a click
-  never establishes either.
 
 Labs use read-only AWS validators (`study_aws`) via a named profile or the standard
 credential chain. If AWS is unconfigured, lab checks show an explicit unavailable state

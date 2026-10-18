@@ -8,25 +8,29 @@ unanswered questions are projected without any answer material.
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
 
 from study_core.artifacts import content_hash
-from study_core.db import immediate_transaction
+from study_core.common import stable_shuffle
+from study_core.db import DbConnection, immediate_transaction
 from study_core.errors import ConflictError, Phase0Error
 from study_core.grading import grade_selection
+from study_core.machines import REVIEW_MACHINE
 from study_core.ports import Clock, RandomSource
 from study_core.scheduling import schedule_review
 from study_core.study_models import (
+    AnswerExplanation,
     DueReview,
     DueReviewPage,
     GradeOutcome,
     GradeResult,
     ObjectiveProgress,
+    OptionRationale,
     ProgressReport,
     QuestionOption,
+    ReviewState,
     SearchPage,
     SearchResult,
     SessionMode,
@@ -61,7 +65,7 @@ class StudyService:
 
     def __init__(
         self,
-        conn: sqlite3.Connection,
+        conn: DbConnection,
         clock: Clock,
         random_source: RandomSource,
         *,
@@ -171,7 +175,7 @@ class StudyService:
         if question_id is None:
             raise ContentGapError("no eligible question for this session")
 
-        question = self._project_unanswered(question_id)
+        question = self._project_unanswered(question_id, session_id=session_id)
         now = self._clock.now_utc()
         with immediate_transaction(self._conn):
             self._conn.execute(
@@ -251,7 +255,7 @@ class StudyService:
         ).fetchall()
         return [str(r["objective_id"]) for r in rows]
 
-    def _project_unanswered(self, question_id: str) -> UnansweredQuestion:
+    def _project_unanswered(self, question_id: str, *, session_id: str) -> UnansweredQuestion:
         q = self._conn.execute(
             "SELECT prompt, scenario_constraint, question_format, source_ids "
             "FROM questions WHERE question_id = ?",
@@ -259,14 +263,17 @@ class StudyService:
         ).fetchone()
         if q is None:
             raise NotFoundError(f"unknown question {question_id}")
-        options = tuple(
+        base_options = [
             QuestionOption(option_id=str(r["option_id"]), text=str(r["text"]))
             for r in self._conn.execute(
                 "SELECT option_id, text FROM question_options WHERE question_id = ? "
                 "ORDER BY option_id",
                 (question_id,),
             ).fetchall()
-        )
+        ]
+        # Randomize display order deterministically per (session, question) so
+        # the correct answer is not positionally predictable; grading uses IDs.
+        options = tuple(stable_shuffle(base_options, seed_key=f"{session_id}:{question_id}"))
         return UnansweredQuestion(
             question_id=question_id,
             prompt=str(q["prompt"]),
@@ -402,6 +409,8 @@ class StudyService:
             previous_interval_days=previous_interval, outcome=outcome, now=now
         )
         if existing is not None:
+            # Rescheduling keeps the review SCHEDULED; validate via the machine.
+            REVIEW_MACHINE.assert_transition(ReviewState.SCHEDULED, ReviewState.SCHEDULED)
             self._conn.execute(
                 "UPDATE reviews SET due_at = ?, interval_days = ?, policy_version = ?, "
                 "updated_at = ? WHERE review_id = ?",
@@ -430,6 +439,47 @@ class StudyService:
                 ),
             )
         return decision.due_at
+
+    # -- explain_answer ------------------------------------------------------
+
+    def explain_answer(self, *, session_id: str, question_id: str) -> AnswerExplanation:
+        """Return teaching material for a question already attempted in a session.
+
+        Guards disclosure: the explanation is available only after the learner
+        has an attempt recorded for this question in this session, so answer
+        material never reaches an unanswered question.
+        """
+        attempted = self._conn.execute(
+            "SELECT 1 FROM attempts WHERE session_id = ? AND question_id = ? LIMIT 1",
+            (session_id, question_id),
+        ).fetchone()
+        if attempted is None:
+            raise NotFoundError("no committed attempt for this question in this session")
+
+        material = self._conn.execute(
+            "SELECT correct_option_ids, explanation FROM answer_material WHERE question_id = ?",
+            (question_id,),
+        ).fetchone()
+        if material is None:
+            raise NotFoundError(f"no answer material for {question_id}")
+        rationale_rows = self._conn.execute(
+            "SELECT option_id, is_correct, rationale FROM option_rationales "
+            "WHERE question_id = ? ORDER BY option_id",
+            (question_id,),
+        ).fetchall()
+        return AnswerExplanation(
+            question_id=question_id,
+            correct_option_ids=tuple(json.loads(material["correct_option_ids"])),
+            explanation=str(material["explanation"]),
+            option_rationales=tuple(
+                OptionRationale(
+                    option_id=str(r["option_id"]),
+                    is_correct=bool(r["is_correct"]),
+                    rationale=str(r["rationale"]),
+                )
+                for r in rationale_rows
+            ),
+        )
 
     # -- get_due_reviews -----------------------------------------------------
 

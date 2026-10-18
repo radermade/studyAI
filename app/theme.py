@@ -132,3 +132,47 @@ PANE_PRESETS: dict[str, tuple[int, int]] = {
     "Workspace wide": (1, 3),
 }
 DEFAULT_PANE_PRESET = "Instructions wide"
+
+
+# Original ASCII banners for the terminal-style score readout. These are
+# decorative; callers must always render an accessible text equivalent too.
+_PASS_BANNER = r"""
+ ____  ____  ____  ____
+||P ||||A ||||S ||||S ||
+||__||||__||||__||||__||
+|/__\||/__\||/__\||/__\|
+"""
+
+_FAIL_BANNER = r"""
+ ____  ____  ____  ____
+||F ||||A ||||I ||||L ||
+||__||||__||||__||||__||
+|/__\||/__\||/__\||/__\|
+"""
+
+
+def score_banner(passed: bool) -> str:
+    """Return the original ASCII PASS/FAIL banner (decorative)."""
+    return _PASS_BANNER if passed else _FAIL_BANNER
+
+
+def score_readout(
+    *,
+    passed: bool,
+    raw_correct: int,
+    scored_total: int,
+    percent: float,
+    scaled_estimate: int,
+) -> str:
+    """Return a monospace, terminal-style score summary block (text, accessible)."""
+    verdict = "PASS" if passed else "FAIL"
+    pct = round(percent * 100)
+    return (
+        "+----------------------------------------+\n"
+        f"|  RESULT: {verdict:<30}|\n"
+        f"|  raw:    {raw_correct:>3} / {scored_total:<3} correct"
+        f"{'':<17}|\n"
+        f"|  score:  {pct:>3}%  ~  {scaled_estimate:>4} / 1000{'':<13}|\n"
+        f"|  pass line: 750 (internal estimate){'':<5}|\n"
+        "+----------------------------------------+"
+    )

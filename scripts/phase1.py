@@ -17,6 +17,7 @@ from content.phase1_seed import (
     build_curriculum,
     build_lab_definitions,
     build_question_options,
+    build_rich_questions,
 )
 from study_core.common import utc_now
 from study_core.db import apply_migrations, connect
@@ -50,6 +51,7 @@ def command_ingest() -> int:
             content_units=build_content_units(),
             curriculum=build_curriculum(),
             labs=build_lab_definitions(),
+            rich_questions=build_rich_questions(),
         )
     finally:
         conn.close()

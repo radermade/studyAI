@@ -126,6 +126,93 @@ class ProgressReport(StrictModel):
     note: str = "Internal estimate derived from committed evidence; not an AWS score."
 
 
+class OptionRationale(StrictModel):
+    """Why one option is correct or incorrect (revealed only after answering)."""
+
+    option_id: str
+    is_correct: bool
+    rationale: str
+
+
+class AnswerExplanation(StrictModel):
+    """Post-answer teaching material for a question.
+
+    Only returned after the learner has committed an attempt, so it never
+    leaks into the unanswered-question projection.
+    """
+
+    question_id: str
+    correct_option_ids: tuple[str, ...]
+    explanation: str
+    option_rationales: tuple[OptionRationale, ...]
+
+
+class ScoredSessionView(StrictModel):
+    """A started scored session reference (no answer material)."""
+
+    session_id: str
+    scored_total: int
+    unscored_total: int
+    item_count: int
+    full_length: bool
+    time_limit_seconds: int | None
+    excluded_domains: tuple[int, ...]
+
+
+class ScoredItemView(StrictModel):
+    """One scored-session item shown to the learner.
+
+    Carries no correct answer, rationale, explanation, objective, or
+    scored/unscored flag, so nothing is leaked during the session.
+    """
+
+    session_id: str
+    position: int
+    total: int
+    question_id: str
+    prompt: str
+    options: tuple[QuestionOption, ...]
+    selected_option_ids: tuple[str, ...]
+    answered: bool
+
+
+class DomainResult(StrictModel):
+    """Informational per-domain result (never a per-domain pass gate)."""
+
+    domain_id: int
+    correct: int
+    total: int
+
+
+class ScoredResult(StrictModel):
+    """The committed result of a scored session, labeled an internal estimate."""
+
+    session_id: str
+    raw_correct: int
+    scored_total: int
+    percent: float
+    scaled_estimate: int
+    passed: bool
+    full_length: bool
+    per_domain: tuple[DomainResult, ...]
+    estimate_note: str = (
+        "Internal estimate only; not an official AWS scaled score. "
+        "Pass threshold is a 750-equivalent on a transparent 100-1000 scale."
+    )
+
+
+class MissedItem(StrictModel):
+    """A missed scored item with its teaching material, for Review."""
+
+    question_id: str
+    objective_ids: tuple[str, ...]
+    unanswered: bool
+    prompt: str
+    correct_option_ids: tuple[str, ...]
+    explanation: str
+    option_rationales: tuple[OptionRationale, ...]
+
+
 class SearchResult(StrictModel):
     """One attributed local search hit."""
 
