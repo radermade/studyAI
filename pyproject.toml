@@ -1,0 +1,48 @@
+[project]
+name = "studyai"
+version = "0.0.0"
+description = "Local-first AWS Certified Generative AI Developer (AIP-C01) study platform."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Pydantic v2 is the only runtime dependency required by Phase 0.
+    # It validates every artifact that crosses an ingestion boundary.
+    "pydantic>=2.9,<3.0",
+]
+
+[dependency-groups]
+# Development-only tooling. Pinned to exact versions for reproducibility.
+dev = [
+    "pytest==8.3.4",
+    "ruff==0.8.4",
+    "mypy==1.14.0",
+]
+
+[tool.uv]
+# Keep resolution reproducible; the committed uv.lock is authoritative.
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["study_core", "study_mcp", "study_aws", "app", "scripts", "tests"]
+
+[tool.ruff.lint]
+# TC/TCH (type-checking-block) rules are omitted: Pydantic models need their
+# field types importable at runtime, so moving them into TYPE_CHECKING blocks
+# would break validation.
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Phase 0 ships study_core, content, scripts, and tests. Later phases add
+# study_mcp, study_aws, and app.
+files = ["study_core", "content", "scripts", "tests"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,25 @@
+# Local-first runtime state. Never commit learner data, baselines, or secrets.
+/data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# OS / editor
+.DS_Store
