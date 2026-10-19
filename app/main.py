@@ -18,6 +18,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 import streamlit as st  # noqa: E402 - import after sys.path setup
+from study_core.subjects import active_subject  # noqa: E402
 
 from app.runtime import get_runtime, learner_id  # noqa: E402
 from app.theme import BASE_CSS, PRODUCT_NAME  # noqa: E402
@@ -49,9 +50,10 @@ def main() -> None:
         return
 
     learner = learner_id()
+    subject = active_subject()
     st.title(PRODUCT_NAME)
     due = runtime.service.get_due_reviews(learner_id=learner)
-    st.caption(f"AWS Certified Generative AI Developer (AIP-C01)  -  Due reviews: {len(due.items)}")
+    st.caption(f"{subject.display_name}  -  Due reviews: {len(due.items)}")
 
     view_name = st.sidebar.radio("Go to", options=list(_VIEWS), key="nav_view")
     st.sidebar.caption("Grill = practice.  Scored Session = exam sim.  Labs = AWS walkthroughs.")

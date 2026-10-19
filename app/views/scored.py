@@ -79,18 +79,31 @@ def _render_session(runtime: StudyRuntime, learner: str, session_id: str) -> Non
     st.progress((position + 1) / item.total, text=f"Question {position + 1} of {item.total}")
     st.markdown(f"**{item.prompt}**")
 
-    default = item.selected_option_ids[0] if item.selected_option_ids else None
-    options = [o.option_id for o in item.options]
-    index = options.index(default) if default in options else None
-    choice = st.radio(
-        "Your answer",
-        options=options,
-        index=index,
-        format_func=lambda oid: next(o.text for o in item.options if o.option_id == oid),
-        key=f"scored_choice_{session_id}_{position}",
-    )
-
-    selected = [choice] if choice is not None else []
+    is_multi = item.question_format == "multiple_response"
+    if is_multi:
+        st.caption("Select ALL that apply (multiple-response: graded all-or-nothing).")
+        prior = set(item.selected_option_ids)
+        selected = [
+            o.option_id
+            for o in item.options
+            if st.checkbox(
+                o.text,
+                value=o.option_id in prior,
+                key=f"scored_choice_{session_id}_{position}_{o.option_id}",
+            )
+        ]
+    else:
+        default = item.selected_option_ids[0] if item.selected_option_ids else None
+        options = [o.option_id for o in item.options]
+        index = options.index(default) if default in options else None
+        choice = st.radio(
+            "Your answer",
+            options=options,
+            index=index,
+            format_func=lambda oid: next(o.text for o in item.options if o.option_id == oid),
+            key=f"scored_choice_{session_id}_{position}",
+        )
+        selected = [choice] if choice is not None else []
 
     nav1, nav2, nav3 = st.columns(3)
     with nav1:

@@ -16,42 +16,37 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-# AIP-C01 task IDs follow `AIP-<domain>.<task>` with domain-specific ranges.
-# Domains and their valid task counts: 1->6, 2->5, 3->4, 4->3, 5->2.
-TASK_ID_PATTERN = re.compile(r"^AIP-([1-5])\.([1-9])$")
-_DOMAIN_TASK_COUNTS: dict[int, int] = {1: 6, 2: 5, 3: 4, 4: 3, 5: 2}
+from study_core.subjects import active_subject
 
-# Canonical ordered list of the 20 current AIP-C01 task IDs.
-ALL_TASK_IDS: tuple[str, ...] = tuple(
-    f"AIP-{domain}.{task}"
-    for domain in sorted(_DOMAIN_TASK_COUNTS)
-    for task in range(1, _DOMAIN_TASK_COUNTS[domain] + 1)
-)
+# The task-ID shape, task inventory, and domain weights now originate from the
+# active Subject (study_core.subjects). These module-level names remain as a
+# stable, backward-compatible facade over the active subject so existing call
+# sites keep working while the engine becomes subject-capable. A future
+# subject-selection screen would change the active subject; it must not require
+# editing these constants.
+_ACTIVE_SUBJECT = active_subject()
 
-# Official domain weights (percent). Must total 100.
-DOMAIN_WEIGHTS: dict[int, int] = {1: 31, 2: 26, 3: 20, 4: 12, 5: 11}
+# Objective IDs follow `<prefix>-<domain>.<task>` with domain-specific ranges.
+TASK_ID_PATTERN: re.Pattern[str] = _ACTIVE_SUBJECT.task_id_pattern
+
+# Canonical ordered list of the active subject's task IDs.
+ALL_TASK_IDS: tuple[str, ...] = _ACTIVE_SUBJECT.all_task_ids
+
+# Official domain weights (percent) for the active subject. Must total 100.
+DOMAIN_WEIGHTS: dict[int, int] = dict(_ACTIVE_SUBJECT.domain_weights)
 
 
 def is_valid_task_id(value: str) -> bool:
-    """Return True when `value` is one of the 20 current AIP-C01 task IDs."""
-    match = TASK_ID_PATTERN.match(value)
-    if match is None:
-        return False
-    domain = int(match.group(1))
-    task = int(match.group(2))
-    max_task = _DOMAIN_TASK_COUNTS.get(domain)
-    return max_task is not None and 1 <= task <= max_task
+    """Return True when `value` is a valid task ID of the active subject."""
+    return _ACTIVE_SUBJECT.is_valid_task_id(value)
 
 
 def domain_of(task_id: str) -> int:
-    """Return the domain number for a valid task ID.
+    """Return the domain number for a valid task ID of the active subject.
 
     Raises ValueError when the task ID is not valid.
     """
-    match = TASK_ID_PATTERN.match(task_id)
-    if match is None or not is_valid_task_id(task_id):
-        raise ValueError(f"invalid task id: {task_id!r}")
-    return int(match.group(1))
+    return _ACTIVE_SUBJECT.domain_of(task_id)
 
 
 def utc_now() -> datetime:

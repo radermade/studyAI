@@ -242,7 +242,8 @@ class ScoredSessionService:
             ).fetchone()["n"]
         )
         q = self._conn.execute(
-            "SELECT prompt FROM questions WHERE question_id = ?", (question_id,)
+            "SELECT prompt, question_format FROM questions WHERE question_id = ?",
+            (question_id,),
         ).fetchone()
         base_options = [
             QuestionOption(option_id=str(r["option_id"]), text=str(r["text"]))
@@ -270,6 +271,7 @@ class ScoredSessionService:
             total=total,
             question_id=question_id,
             prompt=str(q["prompt"]),
+            question_format=str(q["question_format"]),
             options=options,
             selected_option_ids=selected,
             answered=answered,

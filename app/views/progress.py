@@ -5,13 +5,14 @@ from __future__ import annotations
 import streamlit as st
 from study_core.bootstrap import StudyRuntime
 from study_core.study_models import DomainMasteryReport, ReadinessReport
+from study_core.subjects import active_subject
 
 from app.components import status_badge
 from app.theme import StatusTone
 
-# Domains with authored content and an enforceable exit gate. The gate is
-# per-domain and extensible; domains are added here as their content lands.
-_EVALUATED_DOMAINS: tuple[int, ...] = (1, 2, 3, 4, 5)
+# The domains to show exit gates for come from the active subject, so adding a
+# subject with a different domain set needs no change here.
+_EVALUATED_DOMAINS: tuple[int, ...] = active_subject().domain_ids
 
 
 def render(runtime: StudyRuntime, learner: str) -> None:

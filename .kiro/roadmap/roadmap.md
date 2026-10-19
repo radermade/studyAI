@@ -666,7 +666,28 @@ Migration path when a measured need arises:
 - Extend the existing `blueprint_version` column toward a `subject_id` foreign key so objectives, questions, attempts, sessions, and labs are scoped to a subject.
 - Keep subject facts in `content/` and configuration — never as constants inside `study_core`, preserving the inward dependency rule.
 
-No code changes are made now; this records the shape of the work so the current AWS-specific constants are a known, contained boundary rather than a scattered assumption.
+Status: Engine prepared (no subject-selection UI yet). Implemented in
+`study_core/subjects.py`: a frozen `Subject` entity owns `subject_id`,
+`display_name`, `blueprint_version`, `id_prefix`, `domain_task_counts`,
+`domain_weights`, and `domain_titles`, and derives `task_id_pattern`,
+`all_task_ids`, `is_valid_task_id`, and `domain_of` from that data (validating
+weights total 100 and domain sets agree). The AIP-C01 facts now originate from
+the `AIP_C01` subject instance, and `content/aip_c01.py` sources
+`BLUEPRINT_VERSION`/domain titles from it. Both former lock-ins are resolved:
+`study_core/common.py` keeps `TASK_ID_PATTERN`, `ALL_TASK_IDS`,
+`DOMAIN_WEIGHTS`, `is_valid_task_id`, and `domain_of` as thin, backward-
+compatible delegations to the active subject, so every call site is unchanged.
+`active_subject()` resolves the one active subject from config (default
+AIP-C01, overridable via `STUDYAI_SUBJECT`) — the single seam a future
+subject-selection screen would drive. The Progress exit gates and readiness
+roll-up read the subject's `domain_ids` rather than a hardcoded tuple, and the
+app header shows `active_subject().display_name`.
+
+Deliberately NOT done (awaiting a measured need): a start/subject-selection
+screen, a `subject_id` persistence column (objectives/questions/attempts remain
+scoped by `blueprint_version`), and a second authored subject. Adding a subject
+is now: register a `Subject`, author its content under `content/`, and set
+`STUDYAI_SUBJECT`.
 
 ## 7. Required hands-on lab matrix
 

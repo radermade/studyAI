@@ -3,6 +3,59 @@
 Local-first study platform for the AWS Certified Generative AI Developer – Professional
 (AIP-C01) exam. See `.kiro/roadmap/roadmap.md` and `.kiro/specs/` for the full design.
 
+## Quick start
+
+Requires Python 3.12 (provisioned by `uv`) and [uv](https://docs.astral.sh/uv/).
+
+```bash
+# 1. Install dependencies
+uv sync
+
+# 2. Build the study database (runs migrations and ingests all content)
+uv run python -m scripts.phase1 ingest
+
+# 3. Launch the Streamlit workspace
+uv run streamlit run app/main.py
+```
+
+Then open the printed `Local URL` (default http://localhost:8501).
+
+### All run commands
+
+```bash
+# Dependencies
+uv sync
+
+# Quality gates
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy study_core study_mcp study_aws app
+uv run pytest -q
+
+# Build / rebuild the study database under data/ (gitignored)
+uv run python -m scripts.phase1 ingest
+
+# Launch the UI
+uv run streamlit run app/main.py
+
+# Local stdio MCP study server (JSON-RPC over stdin/stdout)
+uv run python -m study_mcp.server
+
+# Phase 0 handoff tooling (blueprint validation; usually not needed to run the app)
+uv run python -m scripts.phase0 build
+uv run python -m scripts.phase0 evaluate
+```
+
+> Note: `streamlit run` is a long-running process — run it in your own terminal
+> rather than a non-interactive script. Stop any stale server before relaunching
+> (e.g. `pkill -f "streamlit run"`).
+
+### Studying a different subject (experimental)
+
+The engine is subject-parameterized: the active study subject defaults to AIP-C01
+and is resolved from the `STUDYAI_SUBJECT` environment variable. Only AIP-C01 ships
+today, so this is a seam for future subjects rather than a user-facing selector.
+
 ## Phase 0 — Blueprint, Safety, and Baseline
 
 Phase 0 produces validated, versioned inputs for the study platform rather than a runtime
@@ -37,8 +90,9 @@ uv run python -m scripts.phase0 build
 uv run python -m scripts.phase0 evaluate
 ```
 
-Runtime state (handoff artifacts, baseline responses) is written under `data/` and is
-gitignored. Authored manifests and content live under `content/` and `labs/`.
+Runtime state (handoff artifacts, baseline responses, the SQLite database) is written
+under `data/` and is gitignored. Authored manifests, questions, and labs live under
+`content/`.
 
 ## Phase 1 — Local Study Core
 
@@ -68,37 +122,26 @@ unanswered questions never carry answer keys or rubrics.
 
 ## The workspace (the UI)
 
-The Streamlit workspace is focused on two things: **Grill** (get quizzed) and **Labs**
-(hands-on AWS walkthroughs), with **Review** and **Progress** as the adaptive support
-that makes grilling target your weak spots.
+Launch with `uv run streamlit run app/main.py` (after ingesting once) and open the
+printed `Local URL` (default http://localhost:8501). The workspace has five views:
 
-### 1. Ingest data (once)
-
-```bash
-uv run python -m scripts.phase1 ingest
-```
-
-### 2. Launch the workspace
-
-```bash
-uv run streamlit run app/main.py
-```
-
-Open the printed `Local URL` (default http://localhost:8501). What you can do:
-
-- **Grill:** start a session and answer one real scenario question at a time with a
-  confidence rating. After you submit, you see which option was correct, a rationale for
-  every option (including why yours was right or wrong), a teaching explanation, and the
-  source. Grading, misconceptions, and spaced reviews persist through `study_core`.
-  Domain 1 (foundation models, RAG, prompts) has authored questions today; the other
-  domains are being filled in.
-- **Labs:** start the Bedrock model-comparison walkthrough, open the AWS Console in a new
-  tab, run a read-only validator check, use the progressive hint ladder, and complete the
-  lab. `Verified` requires validator evidence; `Cleaned up` requires proven absence — a
-  click never establishes either.
-- **Review:** committed due reviews (correct answers schedule future reviews).
-- **Progress:** evidence-based, per-objective view (labeled an internal estimate).
+- **Grill:** answer one real scenario question at a time with a confidence rating. After
+  you submit, you see which option was correct, a rationale for every option, a teaching
+  explanation, and the source. Grading, misconceptions, and spaced reviews persist
+  through `study_core`. All five domains have authored questions (4 per objective).
+- **Scored Session:** an exam-style run that mirrors the real AIP-C01 mechanics —
+  officially weighted selection, no feedback until you submit, multiple-choice and
+  all-or-nothing multiple-response grading, and a transparent 100–1000 scaled-score
+  estimate (pass at 750, compensatory). A full session is 65 scored + 10 unscored = 75
+  questions. Sessions are non-accumulating (a new one replaces the prior).
+- **Labs:** 12 guided AWS Console walkthroughs with prediction prompts, a progressive
+  hint ladder, read-only validator checks, reflections, and evidence-based cleanup.
+  `Verified` requires validator evidence; `Cleaned up` requires proven absence — a click
+  never establishes either.
+- **Review:** scored-session misses first, then committed spaced reviews.
+- **Progress:** an evidence-based readiness roll-up (whole-exam go/no-go) plus per-domain
+  exit gates and per-objective accuracy, all labeled internal estimates — not AWS scores.
 
 Labs use read-only AWS validators (`study_aws`) via a named profile or the standard
 credential chain. If AWS is unconfigured, lab checks show an explicit unavailable state
-and every other view still works offline. Mock is a labeled placeholder until Phase 8.
+and every other view still works offline.

@@ -236,7 +236,7 @@ def _ingest_rich_questions(
                 str(question["prompt"]),
                 str(question["scenario_constraint"]),
                 str(question["difficulty"]),
-                "multiple_choice",
+                str(question.get("question_format", "multiple_choice")),
                 json.dumps(list(question.get("source_ids", ["aip-c01-domain-1"]))),
                 now_iso,
             ),

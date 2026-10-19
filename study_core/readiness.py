@@ -23,11 +23,10 @@ from study_core.study_models import (
     MasteryCriterion,
     ReadinessReport,
 )
+from study_core.subjects import active_subject
 
 # Roadmap Phase 8 overall threshold on a fresh full-length mock.
 DEFAULT_OVERALL_THRESHOLD = 0.85
-
-_ALL_DOMAINS: tuple[int, ...] = (1, 2, 3, 4, 5)
 
 
 class ReadinessEvaluator:
@@ -54,7 +53,7 @@ class ReadinessEvaluator:
                 passed=report.passed,
                 grill_accuracy=report.grill_accuracy,
             )
-            for d in _ALL_DOMAINS
+            for d in active_subject().domain_ids
             for report in (self._mastery.evaluate(learner_id=learner_id, domain_id=d),)
         )
         scored_accuracy, scored_full = self._latest_scored(learner_id)

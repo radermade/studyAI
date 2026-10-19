@@ -6,32 +6,35 @@ import pytest
 from study_core.scored_service import ScoredSessionError, ScoredSessionService
 
 
-def _correct_option(scored: ScoredSessionService, question_id: str) -> str:
-    """Read the keyed-correct option id directly for test purposes."""
+def _correct_options(scored: ScoredSessionService, question_id: str) -> list[str]:
+    """Read the full keyed-correct option set directly for test purposes."""
+    import json
+
     row = scored._conn.execute(
         "SELECT correct_option_ids FROM answer_material WHERE question_id = ?",
         (question_id,),
     ).fetchone()
-    import json
-
-    first = next(iter(json.loads(row["correct_option_ids"])))
-    return str(first)
+    return [str(o) for o in json.loads(row["correct_option_ids"])]
 
 
 def _complete_session(scored: ScoredSessionService, *, correct: bool) -> str:
     view = scored.start(learner_id="L1")
     for pos in range(view.item_count):
         item = scored.current_item(session_id=view.session_id, position=pos)
-        right = _correct_option(scored, item.question_id)
+        right = _correct_options(scored, item.question_id)
         if correct:
-            choice = right
+            # Select exactly the correct set (handles multiple-response too).
+            selected = right
         else:
-            # Deliberately pick a wrong option (any option that is not correct).
-            choice = next(o.option_id for o in item.options if o.option_id != right)
+            # Produce a set that is not equal to the correct set: pick a single
+            # option that is not fully correct (an incorrect one if available,
+            # else a strict subset of a multi-answer key).
+            wrong = next((o.option_id for o in item.options if o.option_id not in right), None)
+            selected = [wrong] if wrong is not None else right[:1]
         scored.answer(
             session_id=view.session_id,
             question_id=item.question_id,
-            selected_option_ids=[choice],
+            selected_option_ids=selected,
         )
     scored.submit(session_id=view.session_id, event_id="e1")
     return view.session_id

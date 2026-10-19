@@ -171,6 +171,7 @@ class ScoredItemView(StrictModel):
     total: int
     question_id: str
     prompt: str
+    question_format: str
     options: tuple[QuestionOption, ...]
     selected_option_ids: tuple[str, ...]
     answered: bool

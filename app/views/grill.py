@@ -58,17 +58,29 @@ def render(runtime: StudyRuntime, learner: str) -> None:
 
 def _render_question(runtime: StudyRuntime, question: dict[str, Any]) -> None:
     st.markdown(f"**{question['prompt']}**")
-    choice = st.radio(
-        "Select the best answer",
-        options=[o["option_id"] for o in question["options"]],
-        format_func=lambda oid: next(
-            o["text"] for o in question["options"] if o["option_id"] == oid
-        ),
-        key=f"grill_choice_{question['question_id']}",
-    )
+    is_multi = question.get("question_format") == "multiple_response"
+    if is_multi:
+        st.caption("Select ALL that apply (graded all-or-nothing).")
+        selected = [
+            o["option_id"]
+            for o in question["options"]
+            if st.checkbox(
+                o["text"], key=f"grill_choice_{question['question_id']}_{o['option_id']}"
+            )
+        ]
+    else:
+        choice = st.radio(
+            "Select the best answer",
+            options=[o["option_id"] for o in question["options"]],
+            format_func=lambda oid: next(
+                o["text"] for o in question["options"] if o["option_id"] == oid
+            ),
+            key=f"grill_choice_{question['question_id']}",
+        )
+        selected = [choice] if choice is not None else []
     confidence = st.slider("How confident are you? (0-100)", 0, 100, 50, key="grill_conf")
     if st.button("Submit answer", key="grill_submit"):
-        _grade(runtime, question, choice, confidence)
+        _grade(runtime, question, selected, confidence)
         st.rerun()
 
 
@@ -85,7 +97,7 @@ def _render_feedback(runtime: StudyRuntime) -> None:
         status_badge(StatusTone.WARNING, "Grading uncertain")
 
     st.markdown(f"**{feedback['prompt']}**")
-    chosen = feedback["chosen_option_id"]
+    chosen = set(feedback["chosen_option_ids"])
     correct_ids = feedback["correct_option_ids"]
 
     # 2-4. Per-option reasoning: mark correct answer and explain your choice.
@@ -93,7 +105,7 @@ def _render_feedback(runtime: StudyRuntime) -> None:
         oid = option["option_id"]
         rationale = feedback["rationales"].get(oid, "")
         marker = "Correct answer" if oid in correct_ids else "Incorrect"
-        you = "  <- your answer" if oid == chosen else ""
+        you = "  <- your answer" if oid in chosen else ""
         st.markdown(f"- **{option['text']}** _({marker}{you})_")
         if rationale:
             st.caption(rationale)
@@ -135,7 +147,7 @@ def _serve_next(runtime: StudyRuntime) -> None:
 def _grade(
     runtime: StudyRuntime,
     question: dict[str, Any],
-    choice: str,
+    selected: list[str],
     confidence: int,
 ) -> None:
     session_id = st.session_state[_SESSION_KEY]
@@ -144,7 +156,7 @@ def _grade(
         grade = runtime.service.grade_and_record(
             session_id=session_id,
             question_id=question["question_id"],
-            selected_option_ids=[choice],
+            selected_option_ids=selected,
             confidence=confidence,
             elapsed_seconds=elapsed,
             event_id=f"grade-{question['question_id']}-{uuid.uuid4().hex}",
@@ -160,7 +172,7 @@ def _grade(
         "outcome": grade.outcome.value,
         "prompt": question["prompt"],
         "options": question["options"],
-        "chosen_option_id": choice,
+        "chosen_option_ids": list(selected),
         "correct_option_ids": list(explanation.correct_option_ids),
         "rationales": {r.option_id: r.rationale for r in explanation.option_rationales},
         "explanation": explanation.explanation,

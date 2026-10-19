@@ -37,17 +37,14 @@ from study_core.sources import (
     SourceRegistry,
     SourceType,
 )
+from study_core.subjects import AIP_C01
 
-BLUEPRINT_VERSION = "AIP-C01-2026-10"
+# Blueprint version and domain titles originate from the AIP-C01 Subject so the
+# subject entity is the single source of truth for these facts.
+BLUEPRINT_VERSION = AIP_C01.blueprint_version
 _RETRIEVED = datetime(2026, 10, 18, tzinfo=UTC)
 
-_DOMAIN_TITLES = {
-    1: "Foundation Model Integration, Data Management, and Compliance",
-    2: "Implementation and Integration",
-    3: "AI Safety, Security, and Governance",
-    4: "Operational Efficiency and Optimization for GenAI Applications",
-    5: "Testing, Validation, and Troubleshooting",
-}
+_DOMAIN_TITLES = dict(AIP_C01.domain_titles)
 
 # Short, original titles for each task objective.
 _OBJECTIVE_TITLES: dict[str, str] = {
