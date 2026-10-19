@@ -19,16 +19,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Classify each request and send simple ones to a small fast model while escalating hard ones to a larger model.",
+                "Classify each request and send simple ones to a small fast model, escalating only hard ones to a larger model.",
             ),
-            ("b", "Route every request to a single large reasoning model so quality is uniform."),
+            (
+                "b",
+                "Route every request to one large reasoning model so quality stays uniform across the simple and hard traffic.",
+            ),
             (
                 "c",
-                "Send all traffic to a small model and accept lower quality on the reasoning requests.",
+                "Send all traffic to a small model and absorb the quality loss on the multi-step reasoning requests to save cost.",
             ),
             (
                 "d",
-                "Run both models on every request in parallel and return whichever finishes first.",
+                "Run both the small and large models on every request in parallel and return whichever response finishes first.",
             ),
         ],
         "correct_option_ids": ["a"],
@@ -48,7 +51,7 @@ QUESTIONS: list[dict[str, Any]] = [
             ),
             "d": (
                 False,
-                "Racing both models doubles cost on every call and returning the first finisher usually drops the slower high-quality answer.",
+                "Racing both models doubles cost per call and returning the first finisher usually drops the slower, better answer.",
             ),
         },
     },
@@ -60,10 +63,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The Amazon Bedrock model catalog page."),
-            ("b", "The AWS Well-Architected Generative AI Lens."),
-            ("c", "The AWS Pricing Calculator cost estimate."),
-            ("d", "An Amazon CloudWatch dashboard of past workloads."),
+            (
+                "a",
+                "The Amazon Bedrock model catalog, which lists each foundation model's modalities, pricing, and Region availability.",
+            ),
+            (
+                "b",
+                "The AWS Well-Architected Generative AI Lens, which supplies pillar-based review questions for generative workloads.",
+            ),
+            (
+                "c",
+                "The AWS Pricing Calculator, which estimates monthly spend from projected token volume and the chosen provisioned throughput commitment.",
+            ),
+            (
+                "d",
+                "An Amazon CloudWatch dashboard that charts invocation counts, token usage, and latency from past workloads.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "The Well-Architected Generative AI Lens provides pillar-based design questions covering responsible AI, cost, reliability, and operations tailored to generative workloads. The other items help with narrower slices (model choice, pricing, monitoring) but do not provide the structured pre-build review.",
@@ -94,18 +109,21 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Fine-tune a custom model on a labeled corpus before showing anything to users."),
+            (
+                "a",
+                "Fine-tune a custom model on a labeled corpus and register it in SageMaker before showing anything to users.",
+            ),
             (
                 "b",
-                "Provision dedicated throughput and build full CI/CD so the POC can ship directly to production.",
+                "Provision dedicated Bedrock throughput and build full CI/CD so the POC can ship straight into production.",
             ),
             (
                 "c",
-                "Prototype with an on-demand Bedrock model and a thin UI, measuring quality against a small curated test set.",
+                "Prototype with an on-demand Bedrock model and a thin UI, scoring quality against a small curated test set.",
             ),
             (
                 "d",
-                "Build a multi-region, auto-scaling architecture to prove it can handle production load.",
+                "Build a multi-Region, auto-scaling architecture with cross-region inference to prove it handles production load.",
             ),
         ],
         "correct_option_ids": ["c"],
@@ -125,7 +143,7 @@ QUESTIONS: list[dict[str, Any]] = [
             ),
             "d": (
                 False,
-                "Multi-region scaling solves load, which is irrelevant until value is proven.",
+                "Multi-Region scaling solves load, which is irrelevant until value is proven.",
             ),
         },
     },
@@ -137,11 +155,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Enable response streaming so tokens render as they are generated."),
-            ("b", "Show an immediate progress or typing indicator while generation runs."),
-            ("c", "Switch to provisioned throughput to lower total generation time."),
-            ("d", "Reduce max output tokens so answers are shorter."),
-            ("e", "Add an exact-string response cache keyed on the full prompt."),
+            (
+                "a",
+                "Enable response streaming so tokens render incrementally as they are generated.",
+            ),
+            (
+                "b",
+                "Show an immediate progress or typing indicator while generation runs in the background.",
+            ),
+            (
+                "c",
+                "Switch to provisioned throughput to buy reserved capacity for the whole workload.",
+            ),
+            ("d", "Reduce the max-output-tokens limit so each answer is forced to be shorter."),
+            ("e", "Add an exact-string response cache keyed on the full verbatim prompt text."),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Streaming tokens and showing an immediate progress indicator both cut perceived latency without touching the fixed model or prompt. Provisioned throughput addresses capacity not single-request time, truncating output changes the tuned answer, and exact-string caching rarely hits in free-form chat.",
@@ -167,10 +194,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Rerank retrieved passages and pass only the top few most relevant ones."),
-            ("b", "Switch to a cheaper model with a smaller context window."),
-            ("c", "Lower the temperature so the model generates fewer tokens."),
-            ("d", "Increase top-k retrieval so the best passage is always included."),
+            (
+                "a",
+                "Rerank the retrieved passages and pass only the top few most relevant ones into the prompt.",
+            ),
+            (
+                "b",
+                "Switch to a cheaper model with a smaller context window so the same passages cost less.",
+            ),
+            (
+                "c",
+                "Lower the sampling temperature so the model is nudged to produce fewer output tokens.",
+            ),
+            (
+                "d",
+                "Increase the retrieval top-k so the single best passage is always guaranteed to be included.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "The cost driver is a bloated input context, so reranking and keeping only the few most relevant passages cuts input tokens while preserving the signal that supports quality. A cheaper model risks quality, temperature affects randomness not length, and higher top-k makes the context even larger.",
@@ -181,7 +220,7 @@ QUESTIONS: list[dict[str, Any]] = [
             ),
             "b": (
                 False,
-                "Changing models trades a quality risk for a cost problem that is actually caused by context size.",
+                "Changing models trades a quality risk for a cost problem actually caused by context size.",
             ),
             "c": (
                 False,
@@ -201,13 +240,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Switch immediately because the new model's leaderboard scores are higher."),
+            (
+                "a",
+                "Switch immediately on the strength of the new model's higher public leaderboard scores alone.",
+            ),
             (
                 "b",
-                "Run the new model against a domain-specific evaluation set and compare to the current model before switching.",
+                "Run the new model against a domain-specific evaluation set and compare it to the current model.",
             ),
-            ("c", "Switch for 50% of traffic permanently and keep both models forever."),
-            ("d", "Ask the vendor whether the new model is better for legal summaries."),
+            (
+                "c",
+                "Split traffic 50/50 between the two models permanently so you never have to decide which is better.",
+            ),
+            (
+                "d",
+                "Ask the model vendor's team whether the newer model is better for legal-summary tasks like yours.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Leaderboard wins do not guarantee improvement on a narrow domain task, so an offline evaluation on representative domain data is the responsible gate before switching. Switching blindly, splitting traffic indefinitely, or relying on vendor opinion all skip the evidence you can generate yourself.",
@@ -235,13 +283,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Cache the last successful response and replay it during an outage."),
-            ("b", "Deploy the application in one Region and retry failed calls in a tight loop."),
+            (
+                "a",
+                "Cache the last successful response per user and replay it whenever the Region is impaired.",
+            ),
+            (
+                "b",
+                "Deploy in a single Region and keep retrying the failed Bedrock calls in a tight loop until they finally succeed.",
+            ),
             (
                 "c",
                 "Use Amazon Bedrock cross-region inference so requests can be served from multiple Regions automatically.",
             ),
-            ("d", "Pre-generate answers for every possible question and store them in Amazon S3."),
+            (
+                "d",
+                "Pre-generate answers for every anticipated question in advance and store them in an Amazon S3 bucket.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Cross-region inference distributes Bedrock requests across multiple Regions managed by the service, improving resilience to single-Region disruption without custom failover code. Tight-loop retries do not help a Region-wide problem, replaying stale responses degrades correctness, and pre-generating all answers is infeasible for open-ended input.",
@@ -274,13 +331,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Build a custom vector pipeline on self-managed OpenSearch with your own ingestion jobs.",
+                "Build a custom vector pipeline on a self-managed OpenSearch cluster with your own ingestion and sync jobs.",
             ),
-            ("b", "Stuff all PDF text into every prompt and skip retrieval entirely."),
-            ("c", "Fine-tune a model on the PDF text so answers come from the model weights."),
+            (
+                "b",
+                "Stuff all of the PDF text into every prompt and skip retrieval, relying on a very large context window.",
+            ),
+            (
+                "c",
+                "Fine-tune a model on the PDF text so the answers are produced directly from the model's weights.",
+            ),
             (
                 "d",
-                "Use Amazon Bedrock Knowledge Bases to handle ingestion, embedding, retrieval, and source citations.",
+                "Use Amazon Bedrock Knowledge Bases to manage ingestion, embedding, retrieval, and source citations.",
             ),
         ],
         "correct_option_ids": ["d"],
@@ -314,12 +377,24 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Collapse multiple reasoning steps that have no data dependency into fewer calls.",
+                "Collapse reasoning steps that have no data dependency between them into fewer model calls.",
             ),
-            ("b", "Parallelize independent FM calls that do not depend on each other's output."),
-            ("c", "Raise the model temperature to speed up sampling."),
-            ("d", "Add more retrieved passages to each prompt for safety."),
-            ("e", "Serve requests from a Region on another continent to balance load."),
+            (
+                "b",
+                "Parallelize independent FM calls that do not consume each other's output on the critical path.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature in the hope that higher randomness speeds up token generation.",
+            ),
+            (
+                "d",
+                "Add several more retrieved passages to each prompt as a safety margin against missing context.",
+            ),
+            (
+                "e",
+                "Serve requests from a Bedrock Region on another continent to spread load more evenly.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Running independent calls in parallel and merging steps that have no data dependency both shorten the critical path without changing what the model produces. Temperature does not affect speed, extra passages add tokens and latency, and a distant Region increases network round-trip time.",
@@ -345,10 +420,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Apply Amazon Bedrock Guardrails with configured content and topic policies."),
-            ("b", "Write per-endpoint regular expressions to strip unsafe words."),
-            ("c", "Lower the model temperature to zero so it cannot say anything harmful."),
-            ("d", "Rely on the base model's built-in alignment and add nothing."),
+            (
+                "a",
+                "Apply Amazon Bedrock Guardrails with configured content filters and denied-topic policies.",
+            ),
+            (
+                "b",
+                "Write per-endpoint regular expressions in each service to strip out unsafe words before responding.",
+            ),
+            (
+                "c",
+                "Lower the model temperature to zero so deterministic output can never say anything harmful.",
+            ),
+            (
+                "d",
+                "Rely entirely on the base model's built-in alignment training and add no extra safety layer.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Bedrock Guardrails provides a managed, policy-based layer for content filtering and topic denial that applies consistently across requests. Scattered regex is brittle and inconsistent, temperature does not control safety, and relying solely on base alignment leaves no configurable organizational policy.",
@@ -357,7 +444,10 @@ QUESTIONS: list[dict[str, Any]] = [
                 True,
                 "Guardrails centralizes configurable content and topic policies independent of application code.",
             ),
-            "b": (False, "Regex filters are brittle, duplicated, and easily bypassed."),
+            "b": (
+                False,
+                "Regex filters are brittle, duplicated across endpoints, and easily bypassed.",
+            ),
             "c": (False, "Temperature affects randomness, not whether content is harmful."),
             "d": (
                 False,
@@ -373,10 +463,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Call a real-time on-demand endpoint once per document as fast as possible."),
-            ("b", "Use batch inference to process the documents in bulk at a lower unit cost."),
-            ("c", "Provision maximum real-time throughput so all two million finish in minutes."),
-            ("d", "Have each user submit documents one at a time through the chat UI."),
+            (
+                "a",
+                "Call a real-time on-demand endpoint once per document and push them through as fast as possible.",
+            ),
+            (
+                "b",
+                "Use Bedrock batch inference to process the documents in bulk overnight at a lower unit cost.",
+            ),
+            (
+                "c",
+                "Provision maximum real-time throughput so all two million documents finish within a few minutes.",
+            ),
+            (
+                "d",
+                "Have staff submit the documents one at a time through the interactive chat UI during the day.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "A large offline job with no latency requirement is the classic fit for batch inference, which processes bulk workloads at lower unit cost. Real-time endpoints and maximum provisioned throughput optimize for interactive latency the workload does not need, and a manual UI flow does not scale to millions of documents.",
@@ -404,13 +506,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Turn the feature off during business hours to save money."),
-            ("b", "Switch models every week until the bill drops."),
+            (
+                "a",
+                "Turn the feature off entirely during business hours and bring it back after the evening peak to save money.",
+            ),
+            (
+                "b",
+                "Swap to a different foundation model every week and keep whichever one the bill happens to drop with.",
+            ),
             (
                 "c",
-                "Emit and monitor invocation and token-usage metrics (for example via CloudWatch) per feature and model.",
+                "Emit invocation and token-usage metrics to CloudWatch per feature and model, then monitor the trends.",
             ),
-            ("d", "Ask users to self-report how many questions they asked."),
+            (
+                "d",
+                "Ask users to self-report after each session roughly how many questions they think they asked.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "You cannot manage what you do not measure, so emitting invocation and token-usage metrics gives the per-feature visibility needed to find the cost driver. Randomly swapping models, disabling the feature, or relying on user self-reports do not produce reliable data.",
@@ -435,9 +546,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The demo looks impressive to executives in a single live session."),
-            ("b", "The model never makes a mistake on any input."),
-            ("c", "The code is fully production-hardened with multi-region failover."),
+            (
+                "a",
+                "The demo looks impressive to executives during a single scripted live session in the boardroom.",
+            ),
+            (
+                "b",
+                "The model produces a flawless answer on every conceivable input with zero mistakes ever observed.",
+            ),
+            (
+                "c",
+                "The code is fully production-hardened with multi-Region failover and automated CI/CD pipelines.",
+            ),
             (
                 "d",
                 "Measurable targets such as answer accuracy on a test set, acceptable latency, and projected unit cost.",
@@ -468,11 +588,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Store conversation state in a shared external store (for example DynamoDB) and keep app instances stateless.",
+                "Store conversation state in a shared external store such as DynamoDB and keep the app instances stateless.",
             ),
-            ("b", "Pin each user to a single instance with sticky sessions forever."),
-            ("c", "Disable autoscaling so there is only ever one instance."),
-            ("d", "Increase each instance's memory so history is less likely to be evicted."),
+            (
+                "b",
+                "Pin each user to one instance with sticky sessions so their in-memory history is always on that host.",
+            ),
+            (
+                "c",
+                "Disable autoscaling and run a single fixed instance so history never moves between hosts at all.",
+            ),
+            (
+                "d",
+                "Increase each instance's memory so cached conversation history is far less likely to be evicted.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Externalizing conversation state into a shared store makes the application instances stateless, so any instance can serve any request after a scaling event. Permanent sticky sessions undermine load balancing and fail on instance loss, disabling autoscaling destroys scalability, and more memory does not help a different instance that lacks the history.",
@@ -500,13 +629,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Keep the largest model since accuracy is paramount."),
+            (
+                "a",
+                "Keep the largest model everywhere since accuracy is paramount and bigger feels safer for the task.",
+            ),
             (
                 "b",
-                "Evaluate a smaller model (for example an Amazon Nova lighter tier) on the task's test set and adopt it if accuracy holds.",
+                "Evaluate a lighter Amazon Nova tier on the task's test set and adopt it if accuracy holds up.",
             ),
-            ("c", "Fine-tune the largest model to make it cheaper to run."),
-            ("d", "Reduce max tokens on the largest model to cut cost."),
+            (
+                "c",
+                "Fine-tune the largest model on task data in the hope that customization makes it cheaper to run.",
+            ),
+            (
+                "d",
+                "Reduce the max-tokens limit on the largest model and expect that alone to cut the per-call cost.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Narrow tasks often run well on a smaller, cheaper model, so the sound approach is to benchmark a lighter model on the actual test set and switch if accuracy is preserved. Keeping the largest model assumes a need you have not verified, fine-tuning does not reduce the base model's per-token cost, and trimming tokens does not change the per-token rate of a large model.",
@@ -522,7 +660,7 @@ QUESTIONS: list[dict[str, Any]] = [
             "c": (False, "Fine-tuning does not lower the large model's inference cost per token."),
             "d": (
                 False,
-                "Fewer output tokens does not reduce the high per-token price of the large model for inputs.",
+                "Fewer output tokens does not reduce the high per-token input price of the large model.",
             ),
         },
     },
@@ -534,11 +672,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Model and prompt evaluation methodology for non-deterministic output."),
-            ("b", "Responsible AI risks such as hallucination, bias, and harmful output."),
-            ("c", "Whether the VPC has an internet gateway."),
-            ("d", "Whether EBS volumes are encrypted at rest."),
-            ("e", "Whether the load balancer uses round-robin or least-connections."),
+            (
+                "a",
+                "Evaluation methodology for non-deterministic model and prompt output across representative cases.",
+            ),
+            (
+                "b",
+                "Responsible-AI risks such as hallucination, bias, and harmful or toxic generated output.",
+            ),
+            (
+                "c",
+                "Whether the VPC's internet gateway and route tables are configured for the subnets correctly.",
+            ),
+            (
+                "d",
+                "Whether the EBS volumes attached to the compute instances are encrypted at rest with KMS keys.",
+            ),
+            (
+                "e",
+                "Whether the Application Load Balancer uses round-robin or least-outstanding-requests routing.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Responsible-AI risk and evaluating non-deterministic output are concerns that generative AI introduces beyond ordinary software. VPC gateways, EBS encryption, and load-balancer algorithms matter for any workload and are not distinctive to generative AI.",
@@ -555,7 +708,7 @@ QUESTIONS: list[dict[str, Any]] = [
                 False,
                 "Internet gateway configuration is a general networking concern, not generative-specific.",
             ),
-            "d": (False, "EBS encryption applies to any workload storing data."),
+            "d": (False, "EBS encryption applies to any workload storing data on disk."),
             "e": (
                 False,
                 "Load-balancing algorithms are standard infrastructure, not unique to generative AI.",
@@ -570,13 +723,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Exact-string cache keyed on the raw prompt text."),
-            ("b", "No caching, because every question is unique."),
+            (
+                "a",
+                "An exact-string cache keyed on the raw prompt text so identical requests reuse the stored answer.",
+            ),
+            (
+                "b",
+                "No caching at all, on the assumption that every incoming question is effectively unique anyway.",
+            ),
             (
                 "c",
-                "Semantic cache that matches new queries to prior answers by embedding similarity above a threshold.",
+                "A semantic cache that matches new queries to prior answers by embedding similarity above a threshold.",
             ),
-            ("d", "Cache the model weights locally to avoid network calls."),
+            (
+                "d",
+                "A local cache of the model weights on the application host to avoid repeated network round trips.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Because duplicates are semantically similar but not identical, a semantic cache that compares query embeddings catches the paraphrases an exact-string cache would miss. Exact matching rarely hits on reworded questions, 'no caching' ignores the measured 30% overlap, and model weights are not something you cache from a managed service.",
@@ -601,10 +763,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Always pass the full manuals in the prompt using the largest context window."),
-            ("b", "Fine-tune on the manuals and never update the model again."),
-            ("c", "Summarize all manuals into one page and only ever use that."),
-            ("d", "Retrieve only the relevant passages per query and pass those to the model."),
+            (
+                "a",
+                "Always pass the full manuals in the prompt using a model with the largest available context window.",
+            ),
+            (
+                "b",
+                "Fine-tune the model once on all the manuals and then never retrain it as new manuals are added.",
+            ),
+            (
+                "c",
+                "Summarize every manual down to a single shared page and answer only from that condensed summary.",
+            ),
+            (
+                "d",
+                "Retrieve only the passages relevant to each query and pass just those into the model.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Retrieval scales as the corpus grows because each request includes only relevant passages, keeping input tokens and cost bounded while preserving grounding. Passing full manuals every time is cost-prohibitive as the corpus grows, a one-page summary loses needed detail, and static fine-tuning cannot keep up with updates.",
@@ -629,10 +803,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Redact or mask personal data before sending transcripts to the model."),
-            ("b", "Send raw transcripts and defer privacy work until production."),
-            ("c", "Ask each customer for consent in real time during the POC."),
-            ("d", "Train a brand-new model from scratch on the transcripts to keep data internal."),
+            (
+                "a",
+                "Redact or mask the personal data in each transcript before sending any of it to the model.",
+            ),
+            (
+                "b",
+                "Send the raw transcripts as-is now and defer all privacy work until the production phase later.",
+            ),
+            (
+                "c",
+                "Collect fresh consent from each customer in real time before their transcript is used in the POC.",
+            ),
+            (
+                "d",
+                "Train a brand-new model from scratch on the transcripts so the data never leaves your account.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Redacting or masking personal data before inference lets the POC proceed without exposing identifiable information, which is a lightweight responsible-AI control. Deferring privacy work risks a leak, real-time consent collection is heavy for a POC, and training from scratch is a massive effort unrelated to the privacy concern.",
@@ -645,7 +831,7 @@ QUESTIONS: list[dict[str, Any]] = [
             "c": (False, "Collecting live consent is operationally heavy for a quick POC."),
             "d": (
                 False,
-                "Training a model from scratch is enormous effort and does not address the inference-time exposure.",
+                "Training a model from scratch is enormous effort and ignores the inference-time exposure.",
             ),
         },
     },
@@ -657,10 +843,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Remove timeouts entirely so slow requests always eventually complete."),
-            ("b", "Set per-request timeouts with bounded retries and surface persistent failures."),
-            ("c", "Retry forever in a tight loop until the call succeeds."),
-            ("d", "Restart the whole service whenever a request is slow."),
+            (
+                "a",
+                "Remove timeouts entirely so that slow requests are always allowed to eventually complete on their own.",
+            ),
+            (
+                "b",
+                "Set per-request timeouts with bounded retries and surface persistent failures to operators.",
+            ),
+            (
+                "c",
+                "Retry each failing call forever in a tight loop until it finally returns a successful response.",
+            ),
+            (
+                "d",
+                "Restart the whole service process whenever any single request is observed taking too long.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Bounded timeouts plus limited retries free worker threads and prevent cascades while still surfacing failures that need attention. No timeouts let hangs accumulate, infinite retries amplify load during an incident, and restarting the service for every slow request is disruptive and does not fix the cause.",
@@ -688,10 +886,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Convert images to base64 text and hope the text model understands them."),
-            ("b", "Chain a separate OCR service, a captioning model, and a text model manually."),
-            ("c", "Use a multimodal FM that accepts both image and text input in one call."),
-            ("d", "Ask users to describe their images in words so only text is needed."),
+            (
+                "a",
+                "Convert the images to base64 text and hope the text-only model can interpret the encoded bytes.",
+            ),
+            (
+                "b",
+                "Chain a separate OCR service, a captioning model, and a text model together in a manual pipeline.",
+            ),
+            (
+                "c",
+                "Use a multimodal foundation model that accepts both image and text input in a single call.",
+            ),
+            (
+                "d",
+                "Ask users to describe their uploaded images in words so that only the text model is ever needed.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "A multimodal FM that natively accepts image and text in a single call avoids brittle multi-service orchestration and is the simplest reliable design. A manual OCR/captioning/text chain adds integration complexity, base64 text is not interpretable as an image by a text model, and forcing users to describe images defeats the feature.",
@@ -707,7 +917,7 @@ QUESTIONS: list[dict[str, Any]] = [
             ),
             "d": (
                 False,
-                "Requiring users to describe images removes the image understanding feature entirely.",
+                "Requiring users to describe images removes the image-understanding feature entirely.",
             ),
         },
     },
@@ -719,9 +929,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Pure on-demand pricing because it requires no commitment."),
-            ("b", "A free-tier model to avoid any charges."),
-            ("c", "Batch inference during business hours only."),
+            (
+                "a",
+                "Pure on-demand Bedrock pricing, chosen because it requires no upfront capacity commitment at all.",
+            ),
+            (
+                "b",
+                "A free-tier allowance only, so that the continuous production workload avoids every charge.",
+            ),
+            (
+                "c",
+                "Batch inference scheduled during business hours to handle the steady interactive requests.",
+            ),
             (
                 "d",
                 "Provisioned throughput to guarantee capacity and stabilize cost at steady high volume.",
@@ -732,7 +951,7 @@ QUESTIONS: list[dict[str, Any]] = [
         "rationales": {
             "a": (
                 False,
-                "On-demand suits spiky or uncertain traffic, not steady high predictable volume where commitment saves money.",
+                "On-demand suits spiky or uncertain traffic, not steady high volume where commitment saves money.",
             ),
             "b": (False, "A free tier cannot carry a continuous production workload."),
             "c": (False, "Batch inference is for offline jobs, not interactive 24/7 traffic."),
@@ -750,10 +969,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Generate a draft and require human review and approval before sending."),
-            ("b", "Auto-send every generated letter to maximize throughput."),
-            ("c", "Trust the model if its self-reported confidence is high."),
-            ("d", "Send letters only when temperature is set to zero."),
+            (
+                "a",
+                "Generate a draft letter and require a human to review and approve it before anything is sent.",
+            ),
+            (
+                "b",
+                "Auto-send every generated letter the moment it is produced to maximize end-to-end throughput.",
+            ),
+            (
+                "c",
+                "Trust the model's output whenever its own self-reported confidence score comes back high enough.",
+            ),
+            (
+                "d",
+                "Send letters automatically but only when the sampling temperature happens to be set to zero.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "High-stakes output warrants a human-in-the-loop design where the model drafts and a person approves before sending, capturing efficiency while controlling risk. Auto-sending removes the safety check, model self-confidence is not reliable, and temperature zero reduces randomness but not factual or legal errors.",
@@ -781,13 +1012,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Hard-code each model's request format throughout the application code."),
+            (
+                "a",
+                "Hard-code each model's specific request and response format directly throughout the application code.",
+            ),
             (
                 "b",
-                "Access models through a common Bedrock interface behind a thin abstraction so swaps are configuration changes.",
+                "Access models through a common Bedrock interface behind a thin abstraction so swaps are config changes.",
             ),
-            ("c", "Copy and paste the integration code per model into separate services."),
-            ("d", "Fine-tune one model heavily so you never need to switch."),
+            (
+                "c",
+                "Copy and paste the per-model integration code into a separate, dedicated microservice for each model.",
+            ),
+            (
+                "d",
+                "Fine-tune one chosen model so heavily on your data that you never feel a need to switch models.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Using Bedrock's unified model access behind a thin internal abstraction turns a model swap into a configuration change rather than code surgery. Hard-coding formats everywhere and copy-pasted per-model services both multiply churn, and locking into one fine-tuned model contradicts the goal of switching freely.",
@@ -795,7 +1035,7 @@ QUESTIONS: list[dict[str, Any]] = [
             "a": (False, "Hard-coded formats everywhere mean a rewrite on every model swap."),
             "b": (
                 True,
-                "A common interface behind a thin abstraction makes swaps a config change.",
+                "A common interface behind a thin abstraction makes swaps a configuration change.",
             ),
             "c": (False, "Duplicated per-model services multiply maintenance and churn."),
             "d": (
@@ -812,13 +1052,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Full-parameter fine-tuning of the entire base model for each variant."),
-            ("b", "Train a new foundation model from scratch on the examples."),
+            (
+                "a",
+                "Full-parameter fine-tuning of the entire base model separately for each writing-style variant.",
+            ),
+            (
+                "b",
+                "Train a brand-new foundation model from scratch on the few thousand curated example documents.",
+            ),
             (
                 "c",
-                "Parameter-efficient fine-tuning with LoRA adapters, one small adapter per variant.",
+                "Parameter-efficient fine-tuning with LoRA adapters, keeping one small adapter per variant.",
             ),
-            ("d", "Put all examples in the prompt on every request as few-shot context."),
+            (
+                "d",
+                "Put all of the curated examples into the prompt on every request as persistent few-shot context.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "LoRA adapters update a small set of parameters, so they are cheap to train and store as separate per-task variants, which fits a limited budget. Full fine-tuning per variant is expensive, training from scratch is far beyond the data and budget, and putting thousands of examples in every prompt is cost-prohibitive and unreliable.",
@@ -846,12 +1095,21 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Pick the model with the most parameters."),
-            ("b", "Pick whichever model the loudest engineer prefers."),
-            ("c", "Pick the newest model by release date."),
+            (
+                "a",
+                "Pick the model that advertises the most parameters, assuming the biggest model summarizes best.",
+            ),
+            (
+                "b",
+                "Pick whichever model the most senior or loudest engineer on the team happens to prefer today.",
+            ),
+            (
+                "c",
+                "Pick the newest model by release date, assuming the most recent launch is the strongest option.",
+            ),
             (
                 "d",
-                "Benchmark all three on a representative labeled test set using consistent metrics and prompts.",
+                "Benchmark all three on a representative labeled test set with consistent metrics and prompts.",
             ),
         ],
         "correct_option_ids": ["d"],
@@ -861,8 +1119,8 @@ QUESTIONS: list[dict[str, Any]] = [
                 False,
                 "Parameter count does not reliably predict task quality or cost-efficiency.",
             ),
-            "b": (False, "Personal preference is not evidence."),
-            "c": (False, "Newest is not necessarily best for the specific task."),
+            "b": (False, "Personal preference is not evidence of task performance."),
+            "c": (False, "Newest by release date is not necessarily best for the specific task."),
             "d": (
                 True,
                 "A controlled benchmark on representative data is the defensible, repeatable method.",
@@ -877,11 +1135,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Use Bedrock cross-region inference to distribute requests across Regions."),
-            ("b", "Apply bounded exponential backoff with jitter on throttling responses."),
-            ("c", "Switch permanently to a smaller, lower-quality model."),
-            ("d", "Cache the static system prompt locally."),
-            ("e", "Remove all retries so requests fail fast and loudly."),
+            (
+                "a",
+                "Use Bedrock cross-region inference to distribute the model requests across multiple Regions.",
+            ),
+            (
+                "b",
+                "Apply bounded exponential backoff with jitter whenever a throttling response is returned.",
+            ),
+            (
+                "c",
+                "Switch permanently to a smaller, lower-quality model to reduce how often requests are throttled.",
+            ),
+            (
+                "d",
+                "Cache the static system prompt locally so it does not have to be sent on every invocation.",
+            ),
+            (
+                "e",
+                "Remove all retries so that throttled requests fail immediately and loudly to the caller.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Cross-region inference adds effective capacity across Regions while bounded backoff with jitter smooths retries during peaks; together they improve throughput and resilience. Downsizing the model changes quality, caching a static prompt does not relieve generation throttling, and removing retries makes transient throttling fatal.",
@@ -910,10 +1183,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "A large text-generation model used to write out numbers."),
-            ("b", "Amazon Titan Text Embeddings."),
-            ("c", "An image-generation model."),
-            ("d", "A speech-to-text model."),
+            (
+                "a",
+                "A large text-generation model prompted to write the vector out as a long list of numbers.",
+            ),
+            (
+                "b",
+                "Amazon Titan Text Embeddings, which produces dense vectors for semantic search.",
+            ),
+            ("c", "An image-generation model such as the Titan or Nova canvas family of models."),
+            (
+                "d",
+                "A speech-to-text transcription model that converts recorded audio into written words.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Titan Text Embeddings is designed to produce dense vector representations for semantic search and retrieval. A text-generation model does not produce proper embeddings, and image or speech models serve unrelated modalities.",
@@ -926,7 +1208,7 @@ QUESTIONS: list[dict[str, Any]] = [
                 True,
                 "Titan Text Embeddings is purpose-built to produce vectors for semantic search.",
             ),
-            "c": (False, "Image generation does not produce text embeddings."),
+            "c": (False, "Image generation produces pixels, not text embedding vectors."),
             "d": (False, "Speech-to-text transcribes audio and is unrelated to text embeddings."),
         },
     },
@@ -938,13 +1220,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Amazon S3 buckets with filenames that include a version number."),
-            ("b", "A spreadsheet tracking which model is live."),
+            (
+                "a",
+                "Amazon S3 buckets where each model artifact's filename includes a hand-written version number.",
+            ),
+            (
+                "b",
+                "A shared spreadsheet in which the team tracks by hand which model version is currently live.",
+            ),
             (
                 "c",
-                "Amazon SageMaker Model Registry with model package versions and approval status.",
+                "Amazon SageMaker Model Registry with model package versions and an explicit approval status.",
             ),
-            ("d", "Git tags on the training script repository."),
+            (
+                "d",
+                "Git tags applied to the training-script repository to mark which commit produced each model.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "SageMaker Model Registry versions model packages and records an approval status, providing the governance gate before deployment. Versioned filenames, spreadsheets, and script Git tags do not track the model artifact lifecycle or enforce approval.",
@@ -975,9 +1266,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "High temperature and high top-p for creativity."),
-            ("b", "Maximum max-tokens to ensure complete answers."),
-            ("c", "A random temperature per request to avoid bias."),
+            (
+                "a",
+                "High temperature combined with a high top-p so the model samples creatively across many tokens.",
+            ),
+            (
+                "b",
+                "The maximum possible max-tokens setting so the structured answer always has room to complete.",
+            ),
+            (
+                "c",
+                "A different random temperature chosen per request so no single setting biases the output.",
+            ),
             ("d", "Temperature near zero with a tight top-p to minimize sampling variability."),
         ],
         "correct_option_ids": ["d"],
@@ -1006,11 +1306,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Improving performance on a narrow task so prompts can be shorter."),
-            ("b", "Teaching the model a consistent domain tone, format, and style."),
-            ("c", "Keeping answers current with documents that change every hour."),
-            ("d", "Providing exact, citable source passages for each answer."),
-            ("e", "Adding brand-new factual records that must appear immediately."),
+            (
+                "a",
+                "Improving accuracy on one narrow task so that the prompts for it can stay short.",
+            ),
+            (
+                "b",
+                "Teaching the model a consistent domain tone, format, and writing style to reuse everywhere.",
+            ),
+            (
+                "c",
+                "Keeping answers current with source documents that are revised as often as every hour.",
+            ),
+            (
+                "d",
+                "Providing exact, citable source passages that back each individual answer the system gives.",
+            ),
+            (
+                "e",
+                "Making brand-new factual records searchable the moment they are added to the system.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Fine-tuning is best for shaping behavior, style, and task skill that can be baked into weights, which also shortens prompts. Current facts, citations, and brand-new records are retrieval strengths because fine-tuning cannot keep up with fast changes or produce source citations.",
@@ -1030,7 +1345,7 @@ QUESTIONS: list[dict[str, Any]] = [
             "d": (False, "Citable passages come from retrieval, not from model weights."),
             "e": (
                 False,
-                "Brand-new records that must appear instantly belong in a retrieval index, not a trained model.",
+                "Brand-new records that must appear instantly belong in a retrieval index, not trained weights.",
             ),
         },
     },
@@ -1042,10 +1357,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Amazon SageMaker endpoints hosting the custom container."),
-            ("b", "Amazon Bedrock on-demand model invocation."),
-            ("c", "A Bedrock Knowledge Base."),
-            ("d", "Amazon Bedrock Prompt Management."),
+            (
+                "a",
+                "Amazon SageMaker endpoints hosting the custom inference container on chosen GPU instances.",
+            ),
+            (
+                "b",
+                "Amazon Bedrock on-demand invocation of one of the supported managed foundation models.",
+            ),
+            (
+                "c",
+                "An Amazon Bedrock Knowledge Base that handles managed retrieval over your proprietary documents.",
+            ),
+            (
+                "d",
+                "Amazon Bedrock Prompt Management, which stores and versions the application's prompts.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "SageMaker lets you host your own container and choose instance types, giving the precise control a proprietary model and specialized hardware need. Bedrock offers managed access to supported models rather than arbitrary custom containers, and Knowledge Bases and Prompt Management are features, not model hosts.",
@@ -1067,10 +1394,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Batch inference only."),
-            ("b", "Provisioned throughput for the customized model."),
-            ("c", "A SageMaker Model Registry entry."),
-            ("d", "Bedrock Guardrails."),
+            (
+                "a",
+                "Batch inference only, submitting the production traffic as periodic offline bulk jobs.",
+            ),
+            (
+                "b",
+                "Provisioned throughput that reserves dedicated capacity for the customized model.",
+            ),
+            (
+                "c",
+                "A SageMaker Model Registry entry that versions and approves the customized model artifact.",
+            ),
+            (
+                "d",
+                "Bedrock Guardrails configured with content and denied-topic policies for the model.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Provisioned throughput reserves dedicated capacity, which is how customized models are served reliably at steady production volume. Batch inference is for offline jobs, the Model Registry governs artifacts rather than serving capacity, and Guardrails enforces safety policy.",
@@ -1084,7 +1423,7 @@ QUESTIONS: list[dict[str, Any]] = [
                 False,
                 "The Model Registry versions artifacts and does not provide serving capacity.",
             ),
-            "d": (False, "Guardrails enforces content policy, unrelated to capacity."),
+            "d": (False, "Guardrails enforces content policy, which is unrelated to capacity."),
         },
     },
     {
@@ -1095,13 +1434,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Standardize on the most capable Nova tier for all turns to be safe."),
-            ("b", "Pick a tier at random to avoid bias."),
+            (
+                "a",
+                "Standardize on the most capable Nova tier for every turn so quality is never in question.",
+            ),
+            (
+                "b",
+                "Pick a Nova tier at random for each session to avoid biasing toward any single tier.",
+            ),
             (
                 "c",
-                "Default to a lighter Nova tier and escalate complex turns to a more capable tier.",
+                "Default to a lighter Nova tier and escalate the rare complex turns to a more capable tier.",
             ),
-            ("d", "Use whichever tier has the largest context window regardless of cost."),
+            (
+                "d",
+                "Use whichever Nova tier offers the largest context window, regardless of its per-token cost.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Defaulting to a lighter tier and escalating only the rare complex turns matches capability to need and controls cost. Standardizing on the top tier overpays for the simple majority, random selection is not engineering, and context-window size is irrelevant to this cost/quality tradeoff.",
@@ -1123,10 +1471,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The temperature is wrong; set it to one."),
-            ("b", "The model is underfitting; reduce the dataset further."),
-            ("c", "The context window is too small; increase max tokens."),
-            ("d", "The model is overfitting; add more diverse, representative training data."),
+            (
+                "a",
+                "The sampling temperature is wrong; raise it to one so the model generalizes to new inputs.",
+            ),
+            (
+                "b",
+                "The model is underfitting; shrink the training set further so it focuses on the key patterns.",
+            ),
+            (
+                "c",
+                "The context window is too small; increase max tokens so the model can hold more at inference.",
+            ),
+            (
+                "d",
+                "The model is overfitting; add more diverse, representative training data to fix generalization.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "High training performance with poor generalization on a small, repetitive set is a classic overfitting signature, remedied by adding more diverse, representative data. Reducing data worsens it, context window relates to inference not training generalization, and temperature does not fix a generalization failure.",
@@ -1151,10 +1511,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Measure multiple dimensions including accuracy, latency, and cost together."),
-            ("b", "Measure only the single highest-weighted metric."),
-            ("c", "Benchmark on synthetic data unrelated to the task."),
-            ("d", "Skip benchmarking and trust vendor claims."),
+            (
+                "a",
+                "Measure several dimensions together, including accuracy, response latency, and per-call cost.",
+            ),
+            (
+                "b",
+                "Measure only the single highest-weighted metric and ignore the others during selection.",
+            ),
+            (
+                "c",
+                "Benchmark on synthetic data that is unrelated to the real task to keep the setup simple.",
+            ),
+            (
+                "d",
+                "Skip the benchmarking step and trust the model vendor's published quality claims instead.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Benchmarking across accuracy, latency, and cost together surfaces tradeoffs so you do not deploy an accurate but unacceptably slow model. Measuring one metric, using unrelated data, or skipping benchmarking all hide the latency problem.",
@@ -1176,11 +1548,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Commit to provisioned throughput when steady volume justifies it."),
-            ("b", "Right-size to a smaller model that still passes the quality bar."),
-            ("c", "Increase temperature to make generation cheaper."),
-            ("d", "Add more few-shot examples to every prompt."),
-            ("e", "Enable verbose chain-of-thought on every request by default."),
+            (
+                "a",
+                "Commit to provisioned throughput once the steady production volume justifies the reservation.",
+            ),
+            (
+                "b",
+                "Right-size down to a smaller model that still clears the task's quality bar on your test set.",
+            ),
+            (
+                "c",
+                "Increase the sampling temperature on each call, expecting higher randomness to be cheaper.",
+            ),
+            (
+                "d",
+                "Add several more few-shot examples to every prompt so the model has more guidance each time.",
+            ),
+            (
+                "e",
+                "Enable verbose chain-of-thought reasoning on every request as the default output mode.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Right-sizing to a smaller sufficient model and committing to provisioned throughput at steady volume are real cost levers. Temperature does not affect price, and more few-shot examples or always-on chain-of-thought increase token counts and cost.",
@@ -1203,10 +1590,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Lower the temperature on the base model."),
-            ("b", "Switch to an instruction-tuned variant designed to follow directions."),
-            ("c", "Increase max tokens so it finishes its thought."),
-            ("d", "Add more retrieved context to the prompt."),
+            (
+                "a",
+                "Lower the sampling temperature on the base model so its rambling output becomes tighter.",
+            ),
+            (
+                "b",
+                "Switch to an instruction-tuned variant that is trained to follow directions and converse.",
+            ),
+            (
+                "c",
+                "Increase the max-tokens limit on the base model so it has room to finish each thought.",
+            ),
+            (
+                "d",
+                "Add more retrieved context to the prompt so the base model has extra material to work with.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Instruction-tuned variants are trained to follow directions and converse, which fixes rambling base-model behavior. Temperature, max-tokens, and extra context do not convert a base model into a good instruction follower.",
@@ -1228,13 +1627,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Whether the S3 bucket policy is public."),
-            ("b", "Whether the EC2 security group allows port 443."),
+            (
+                "a",
+                "Whether the application's S3 bucket policy was accidentally left open to public access.",
+            ),
+            (
+                "b",
+                "Whether the EC2 security group attached to the host allows outbound traffic on port 443.",
+            ),
             (
                 "c",
                 "Whether model access for that specific model has been requested and granted in Bedrock.",
             ),
-            ("d", "Whether the model's weights were downloaded locally."),
+            (
+                "d",
+                "Whether the foundation model's weights were ever downloaded to the local instance disk.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Bedrock requires enabling access to specific models in the account before invocation, so that is the first thing to verify when IAM is correct but access is denied. Security groups, S3 bucket policies, and local weights are unrelated to Bedrock model access enablement.",
@@ -1256,10 +1664,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Prompt engineering with a few examples."),
-            ("b", "Supervised fine-tuning that requires labeled input-output pairs."),
-            ("c", "Reinforcement learning from human feedback on the corpus."),
-            ("d", "Continued pre-training on the unlabeled domain corpus."),
+            (
+                "a",
+                "Prompt engineering with a handful of in-context examples at inference time for each request.",
+            ),
+            (
+                "b",
+                "Supervised fine-tuning, which requires curated labeled input-output pairs the corpus lacks.",
+            ),
+            (
+                "c",
+                "Reinforcement learning from human feedback, which needs ranked human-preference comparisons.",
+            ),
+            (
+                "d",
+                "Continued pre-training on the large unlabeled domain corpus to absorb its vocabulary.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Continued pre-training uses large unlabeled domain text to adapt the model's language and patterns before task tuning. Supervised fine-tuning and RLHF need labeled or feedback data the scenario does not have, and prompt engineering does not internalize domain vocabulary into the model.",
@@ -1287,10 +1707,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "A sufficiently large context window to hold the full contract."),
-            ("b", "The fastest time-to-first-token."),
-            ("c", "The lowest per-image price."),
-            ("d", "Support for the most output languages."),
+            (
+                "a",
+                "A context window large enough to hold the full 100-page contract in a single request.",
+            ),
+            (
+                "b",
+                "The fastest time-to-first-token, so the first words of the answer appear with minimal delay.",
+            ),
+            (
+                "c",
+                "The lowest per-image generation price, so visual outputs stay inexpensive at high volume.",
+            ),
+            (
+                "d",
+                "Support for the widest range of output languages, so answers can be returned in many locales.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Processing a 100-page contract whole requires a context window large enough to fit it, making window size the decisive criterion. Time-to-first-token, image pricing, and language breadth do not address the core need to hold the entire document.",
@@ -1312,13 +1744,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Have humans manually read all hundreds of outputs end to end."),
+            (
+                "a",
+                "Have reviewers manually read all several hundred candidate outputs end to end by hand.",
+            ),
             (
                 "b",
-                "Use an automated LLM-as-judge pass at scale, then human-review the top candidates.",
+                "Use an automated LLM-as-judge pass at scale, then have people review the top candidates.",
             ),
-            ("c", "Rely only on exact string match against a single reference summary."),
-            ("d", "Skip evaluation and ship the first output that looks fine."),
+            (
+                "c",
+                "Rely only on exact string match of each output against a single reference summary.",
+            ),
+            (
+                "d",
+                "Skip evaluation and ship whichever of the first outputs happens to look fine on a glance.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "An automated judge screens at scale while human review on the shortlist adds credibility for open-ended quality, balancing cost and trust. Fully manual review does not scale, exact match is wrong for free-form summaries, and skipping evaluation forfeits quality control.",
@@ -1343,10 +1784,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Increase max tokens so it has room to finish."),
-            ("b", "Raise the temperature so it stops rambling."),
-            ("c", "Configure a stop sequence at the closing delimiter so generation halts there."),
-            ("d", "Switch to an embedding model."),
+            (
+                "a",
+                "Increase the max-tokens limit so the model has enough room to finish the whole response.",
+            ),
+            (
+                "b",
+                "Raise the sampling temperature so the model is less inclined to keep rambling after the JSON.",
+            ),
+            (
+                "c",
+                "Configure a stop sequence at the closing delimiter so generation halts right there.",
+            ),
+            (
+                "d",
+                "Switch to an embedding model so the structured block is produced as a vector instead.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "A stop sequence halts generation exactly at a defined delimiter, which prevents trailing commentary from breaking the parser. Temperature does not control where output ends, more tokens allow more trailing text, and embedding models do not generate structured responses.",
@@ -1365,14 +1818,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "You need pay-per-use access and the fastest path to a prototype."),
+            (
+                "a",
+                "You want pay-per-use access and the fastest possible path to a working prototype.",
+            ),
             (
                 "b",
-                "You want serverless access to multiple leading FMs with no infrastructure to manage.",
+                "You want serverless access to several leading FMs with no infrastructure to manage.",
             ),
-            ("c", "You must run a proprietary open-weights model in a custom container."),
-            ("d", "You require precise control over GPU instance types and the inference stack."),
-            ("e", "You need to attach a kernel-level profiler to the serving process."),
+            (
+                "c",
+                "You must run a proprietary open-weights model inside your own custom inference container.",
+            ),
+            (
+                "d",
+                "You require precise control over the GPU instance types and the full inference stack.",
+            ),
+            (
+                "e",
+                "You need to attach a kernel-level profiler directly to the model-serving process.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Bedrock shines when you want managed, serverless, pay-per-use access to multiple FMs without running infrastructure. Custom containers, specific GPU control, and kernel-level profiling require the control that SageMaker hosting provides.",
@@ -1395,10 +1860,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Disable logging so changes are not noticed."),
-            ("b", "Always invoke whatever the latest default version is."),
-            ("c", "Randomly choose a version per request to spread risk."),
-            ("d", "Pin to a specific model version and upgrade deliberately after evaluation."),
+            (
+                "a",
+                "Disable the application's logging so that the behavioral change is simply not noticed again.",
+            ),
+            (
+                "b",
+                "Always invoke whatever the provider currently exposes as the latest default model version.",
+            ),
+            (
+                "c",
+                "Choose a model version at random on each request to spread the risk across versions.",
+            ),
+            (
+                "d",
+                "Pin to a specific model version and upgrade deliberately after evaluating the new one.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Pinning to a specific model version and upgrading only after evaluation gives predictable behavior and controlled change. Always using the latest default invites silent regressions, random versions create inconsistency, and disabling logging hides problems rather than preventing them.",
@@ -1422,11 +1899,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Stay with prompt engineering now and revisit fine-tuning if volume grows and requirements stabilize.",
+                "Stay with prompt engineering now and revisit fine-tuning if volume grows and requirements settle.",
             ),
-            ("b", "Fine-tune immediately since it is the modern approach."),
-            ("c", "Train a model from scratch to fully own the stack."),
-            ("d", "Fine-tune weekly to match the shifting requirements."),
+            (
+                "b",
+                "Fine-tune the base model right away because fine-tuning is the modern, expected approach.",
+            ),
+            (
+                "c",
+                "Train a model from scratch on your data so the organization fully owns the entire stack.",
+            ),
+            (
+                "d",
+                "Fine-tune the model again every week so it keeps pace with the weekly requirement changes.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "With low volume, shifting requirements, and acceptable prompt-based quality, fine-tuning has weak ROI, so staying with prompting and revisiting later is sound. Fine-tuning for fashion, training from scratch, or retuning weekly all add cost and churn without justified benefit.",
@@ -1448,10 +1934,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Rely on each model's built-in alignment and hope they match."),
-            ("b", "Define a shared Bedrock Guardrail and apply it across the models."),
-            ("c", "Write a separate safety filter inside every team's codebase."),
-            ("d", "Only allow one model company-wide so policy is implicit."),
+            (
+                "a",
+                "Rely on each model's own built-in alignment and hope the policies happen to line up across them.",
+            ),
+            (
+                "b",
+                "Define a shared Bedrock Guardrail and apply the same policy across every model teams use.",
+            ),
+            (
+                "c",
+                "Write a separate hand-coded safety filter inside each individual team's own codebase.",
+            ),
+            (
+                "d",
+                "Allow only one approved model company-wide so a single policy is implied by the model choice.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "A shared Guardrail applies a single configurable policy across different models, giving consistency independent of model choice. Relying on each model's own alignment yields inconsistency, per-team filters duplicate effort, and forcing one model is an unnecessary restriction that still lacks an explicit policy.",
@@ -1473,13 +1971,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Choose a text-only model and describe the images in words."),
-            ("b", "Choose the image model with the highest resolution regardless of features."),
+            (
+                "a",
+                "Choose a text-only model and have it describe the desired images in words for someone else.",
+            ),
+            (
+                "b",
+                "Choose the image model with the highest output resolution, regardless of its editing features.",
+            ),
             (
                 "c",
-                "Choose an image model that supports both text-to-image generation and image editing/inpainting.",
+                "Choose an image model that supports both text-to-image generation and in-place editing.",
             ),
-            ("d", "Choose an embedding model to represent the images."),
+            (
+                "d",
+                "Choose an embedding model that represents the product images as vectors for similarity search.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "A single image model that covers both generation and editing minimizes integration while meeting both needs. Highest resolution alone may lack editing, a text-only model cannot produce images, and an embedding model does not generate or edit images.",
@@ -1501,10 +2008,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Increasing the embedding model size to tolerate noise."),
-            ("b", "A manual spot-check of a few rows each morning."),
-            ("c", "A downstream alarm that fires after bad embeddings are created."),
-            ("d", "AWS Glue Data Quality rules evaluated during the ETL job."),
+            (
+                "a",
+                "Increase the embedding model's size so the vectors become robust enough to tolerate the bad rows.",
+            ),
+            (
+                "b",
+                "Have an engineer manually spot-check a handful of rows from each vendor file every morning.",
+            ),
+            (
+                "c",
+                "Add a downstream alarm that fires after bad embeddings have already been created in the index.",
+            ),
+            (
+                "d",
+                "Define AWS Glue Data Quality rules evaluated inside the ETL job before the data moves on.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Glue Data Quality lets you declare rules (completeness, ranges) that run inside the ETL job and gate bad data before it propagates. Manual spot-checks miss most rows, a downstream alarm fires only after damage is done, and a bigger embedding model does not fix invalid source data.",
@@ -1528,12 +2047,24 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Detect and redact or tokenize PII during ingestion before embedding and indexing.",
+                "Detect and redact or tokenize PII during ingestion, before any embedding or indexing happens.",
             ),
-            ("b", "Validate post-ingestion that no detectable PII remains in indexed content."),
-            ("c", "Redact PII only in the UI after the model has already produced output."),
-            ("d", "Instruct the model politely not to repeat any PII."),
-            ("e", "Store PII in the index but filter it from results by keyword."),
+            (
+                "b",
+                "Run a post-ingestion validation scan to confirm no detectable PII remains in indexed content.",
+            ),
+            (
+                "c",
+                "Redact the PII only in the UI, after the model has already received and processed the content.",
+            ),
+            (
+                "d",
+                "Add a system-prompt instruction politely asking the model never to repeat any PII it sees.",
+            ),
+            (
+                "e",
+                "Store the PII in the index as normal but filter it out of results with a keyword blocklist.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Redacting at ingestion keeps PII out of the index and model, and a post-ingestion validation scan verifies the control actually worked. UI-only redaction already exposed PII upstream, asking the model is unreliable, and storing PII with keyword filtering is leaky.",
@@ -1553,13 +2084,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Rely on the model to infer the department from the question."),
+            (
+                "a",
+                "Rely on the model to infer each user's own department from the wording of their question at query time.",
+            ),
             (
                 "b",
-                "Attach department and source metadata to each chunk at ingestion for later filtering.",
+                "Attach department and source metadata to each chunk at ingestion so queries can filter on it later.",
             ),
-            ("c", "Store everything together and sort results alphabetically."),
-            ("d", "Re-ingest the whole corpus per department into separate accounts."),
+            (
+                "c",
+                "Store every department's content together in one index and sort the results alphabetically.",
+            ),
+            (
+                "d",
+                "Re-ingest the entire corpus once per department into separate AWS accounts for isolation.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Capturing department and source metadata on each chunk at ingestion is what enables precise metadata-filtered retrieval later. Letting the model guess is unreliable, alphabetical sorting does not restrict scope, and per-department re-ingestion into separate accounts is heavy and unnecessary when metadata filtering suffices.",
@@ -1584,13 +2124,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Skip scanned pages entirely to keep the index clean."),
-            ("b", "Increase the embedding dimension to capture the images."),
+            (
+                "a",
+                "Skip the scanned image pages entirely so that only clean native-text pages enter the index.",
+            ),
+            (
+                "b",
+                "Increase the embedding dimension so the resulting vectors can capture the scanned image pages.",
+            ),
             (
                 "c",
-                "Run OCR (for example with Amazon Textract) on scanned pages to extract text before chunking.",
+                "Run OCR with Amazon Textract on the scanned pages to extract text before chunking them.",
             ),
-            ("d", "Lower the retrieval top-k so fewer empty chunks appear."),
+            (
+                "d",
+                "Lower the retrieval top-k so that fewer of the empty, text-less chunks surface in results.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "OCR extracts machine-readable text from scanned pages so they can be chunked and retrieved, which directly addresses the missing-text problem. A larger embedding dimension does not read images, skipping pages drops content, and reducing top-k does not create the missing text.",
@@ -1612,11 +2161,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Validity: values fall within allowed ranges or formats."),
-            ("b", "Completeness: required fields are not null."),
-            ("c", "The embedding model's temperature setting."),
-            ("d", "The color theme of the Streamlit UI."),
-            ("e", "The number of CPU cores on the client laptop."),
+            (
+                "a",
+                "Validity, confirming that each value falls within its allowed numeric range or string format.",
+            ),
+            (
+                "b",
+                "Completeness, confirming that every required field in a record is present and not null.",
+            ),
+            (
+                "c",
+                "The embedding model's temperature setting used later when the chunks are vectorized.",
+            ),
+            (
+                "d",
+                "The chosen color theme of the Streamlit user interface that displays the results.",
+            ),
+            (
+                "e",
+                "The number of CPU cores available on the analyst's client laptop running the app.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Completeness and validity are core data-quality dimensions that can be enforced before ingestion. Temperature, UI theme, and client CPU count are not properties of the source data and are irrelevant to data-quality gating.",
@@ -1636,10 +2200,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Double the embedding model size to speed up full re-embeds."),
-            ("b", "Re-embed the entire corpus every night to be safe."),
-            ("c", "Stop updating the index and accept staleness."),
-            ("d", "Incrementally ingest and re-embed only changed or new documents."),
+            (
+                "a",
+                "Double the embedding model's size on the theory that a bigger model speeds up full re-embeds.",
+            ),
+            (
+                "b",
+                "Re-embed the entire corpus of millions of documents every single night just to be safe.",
+            ),
+            (
+                "c",
+                "Stop updating the index on a schedule and simply accept that it grows increasingly stale.",
+            ),
+            (
+                "d",
+                "Incrementally ingest and re-embed only the documents that changed or were newly added.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Processing only changed or new documents keeps the index current at a fraction of the cost of a full nightly re-embed. Full re-embedding wastes compute on unchanged data, freezing the index creates staleness, and a bigger model makes full re-embeds more expensive, not cheaper.",
@@ -1661,10 +2237,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Deduplicate documents during ingestion so each unique item is indexed once."),
-            ("b", "Increase top-k so the non-duplicate results also appear."),
-            ("c", "Raise the model temperature for more varied answers."),
-            ("d", "Shrink chunk size so duplicates are less likely to match."),
+            (
+                "a",
+                "Deduplicate documents during ingestion so each unique item is embedded and indexed only once.",
+            ),
+            (
+                "b",
+                "Increase the retrieval top-k so that the non-duplicate results eventually appear alongside the copies.",
+            ),
+            (
+                "c",
+                "Raise the model temperature during generation so the answers come out more varied each time.",
+            ),
+            (
+                "d",
+                "Shrink the chunk size so the duplicated passages are less likely to match the same query.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Deduplicating at ingestion removes redundant copies so retrieval surfaces diverse unique content. Raising top-k returns more results including more duplicates, temperature affects generation not retrieval, and smaller chunks still match duplicate content.",
@@ -1686,13 +2274,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Coerce missing fields to empty strings and continue."),
+            (
+                "a",
+                "Coerce any missing fields to empty strings and continue ingesting the record anyway.",
+            ),
             (
                 "b",
-                "Validate each record against a strict Pydantic model and reject records that fail.",
+                "Validate each record against a strict Pydantic model and reject the ones that fail validation.",
             ),
-            ("c", "Wrap ingestion in a bare except that ignores errors."),
-            ("d", "Trust upstream and add no validation."),
+            (
+                "c",
+                "Wrap the whole ingestion step in a bare except block that quietly ignores every error.",
+            ),
+            (
+                "d",
+                "Trust the upstream team's output and add no validation at the ingestion boundary at all.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Validating records against a strict Pydantic model at the ingestion boundary rejects malformed data loudly instead of letting it corrupt downstream state. Coercing missing fields hides drift, a bare except silently swallows errors, and trusting upstream is exactly what caused the corruption.",
@@ -1714,10 +2311,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Remove all headings so there is nothing to split around."),
-            ("b", "Make the fixed chunk size larger so fewer splits occur."),
-            ("c", "Use structure-aware chunking that respects headings and section boundaries."),
-            ("d", "Switch to a bigger embedding model."),
+            (
+                "a",
+                "Strip all the headings out first so there are no structural markers left to split around.",
+            ),
+            (
+                "b",
+                "Make the fixed chunk size much larger so that fewer arbitrary mid-sentence splits occur.",
+            ),
+            (
+                "c",
+                "Use structure-aware chunking that respects the markdown headings and section boundaries.",
+            ),
+            (
+                "d",
+                "Switch to a bigger embedding model and expect it to compensate for the incoherent chunks.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Structure-aware chunking aligns chunk boundaries with headings and sections, keeping each chunk coherent and self-contained. A larger fixed size still splits arbitrarily, removing headings destroys useful structure, and a bigger embedding model cannot repair incoherent chunks.",
@@ -1742,10 +2351,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "AWS Cost Explorer."),
-            ("b", "Amazon CloudFront."),
-            ("c", "Amazon Route 53."),
-            ("d", "Amazon Comprehend PII detection."),
+            (
+                "a",
+                "AWS Cost Explorer, which analyzes and visualizes your account's spending over time.",
+            ),
+            (
+                "b",
+                "Amazon CloudFront, the content delivery network that caches and serves assets globally.",
+            ),
+            (
+                "c",
+                "Amazon Route 53, the managed DNS service that resolves domain names to endpoints.",
+            ),
+            ("d", "Amazon Comprehend's PII detection, which finds personal entities in free text."),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Amazon Comprehend provides managed PII detection for free text, which beats brittle hand-rolled regex. CloudFront is a CDN, Route 53 is DNS, and Cost Explorer analyzes spend, none of which detect PII.",
@@ -1766,12 +2384,24 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Record a processed-state marker so completed items are not reprocessed blindly.",
+                "Record a processed-state marker so items already completed are not blindly reprocessed.",
             ),
-            ("b", "Make writes idempotent using a stable document ID as a uniqueness key."),
-            ("c", "Assign a new random ID to every record on each run."),
-            ("d", "Delete the whole index before every run to be safe."),
-            ("e", "Disable error logging to speed up the job."),
+            (
+                "b",
+                "Make each write idempotent by using a stable document ID as the uniqueness key.",
+            ),
+            (
+                "c",
+                "Assign a brand-new random identifier to every record on each run of the pipeline.",
+            ),
+            (
+                "d",
+                "Delete the entire vector index before every run so each run starts from a clean slate.",
+            ),
+            (
+                "e",
+                "Disable error logging during the job so that it runs a little faster end to end.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Idempotent writes keyed on a stable document ID and a processed-state marker let the pipeline reprocess safely without duplicates or loss. New random IDs each run create duplicates, deleting the index every run risks data loss and downtime, and disabling logging hides failures.",
@@ -1793,11 +2423,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Documents and queries must be embedded with the same model/version to share a vector space.",
+                "Documents and queries must be embedded with the same model and version to share a vector space.",
             ),
-            ("b", "Query embeddings should always use a larger model than documents."),
-            ("c", "Embeddings only matter at ingestion, not at query time."),
-            ("d", "Retrieval quality depends only on top-k, not on the embedding model."),
+            (
+                "b",
+                "Query embeddings should always use a larger model than the one used to embed the documents.",
+            ),
+            (
+                "c",
+                "Embeddings only matter during ingestion of the documents, not when embedding the query.",
+            ),
+            (
+                "d",
+                "Retrieval quality depends only on the top-k setting, never on the embedding model used.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Vectors are only comparable within the same embedding space, so changing the query model without re-embedding the index breaks similarity matching. Using a larger model for queries, ignoring query-time embeddings, or blaming top-k all misunderstand the shared-space requirement.",
@@ -1822,13 +2461,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Embed the raw comma-separated values unchanged."),
+            (
+                "a",
+                "Embed the raw comma-separated row values exactly as they appear in the source file.",
+            ),
             (
                 "b",
-                "Serialize each row into a descriptive natural-language sentence before embedding.",
+                "Serialize each row into a descriptive natural-language sentence before embedding it.",
             ),
-            ("c", "Store the table as an image and embed the image."),
-            ("d", "Increase top-k until a relevant row appears."),
+            (
+                "c",
+                "Render the whole table as an image and embed the image instead of the row text.",
+            ),
+            (
+                "d",
+                "Increase the retrieval top-k steadily until a relevant row eventually turns up in results.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Turning each row into a descriptive natural-language sentence aligns the stored vectors with how users phrase questions, improving retrieval. Raw CSV rows embed poorly, imaging the table loses structured meaning, and raising top-k does not fix a representation mismatch.",
@@ -1853,13 +2501,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Store timestamps as free-text strings in whatever format arrives."),
-            ("b", "Store each timestamp in its original local zone with no offset recorded."),
+            (
+                "a",
+                "Store each timestamp as a free-text string in whatever format the source happened to send.",
+            ),
+            (
+                "b",
+                "Store each timestamp in its original local time zone without recording any UTC offset.",
+            ),
             (
                 "c",
                 "Normalize and store all timestamps as UTC ISO 8601 and convert to local time only for display.",
             ),
-            ("d", "Drop timestamps to avoid confusion."),
+            (
+                "d",
+                "Drop the timestamps entirely to avoid the confusion that mixed time zones were causing.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Storing all timestamps as UTC ISO 8601 and converting to local only for display makes them unambiguous and comparable across zones. Zone-local values without offsets, free-text formats, and dropping timestamps all break comparability.",
@@ -1881,9 +2538,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The number of times the document was previously retrieved."),
-            ("b", "The model's temperature at generation time."),
-            ("c", "The color of the original PDF cover page."),
+            (
+                "a",
+                "The running count of how many times each document has previously been retrieved for a query.",
+            ),
+            (
+                "b",
+                "The sampling temperature that was configured on the model at the moment the answer was generated.",
+            ),
+            (
+                "c",
+                "The dominant color of the original PDF's cover page, captured when the file was first ingested.",
+            ),
             (
                 "d",
                 "A stable source identifier and location (document ID, title, and link) stored on each chunk.",
@@ -1909,10 +2575,22 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Trigger ingestion from S3 event notifications into a serverless function."),
-            ("b", "Poll the bucket every second from a dedicated always-on server."),
-            ("c", "Have an operator manually run the ingestion script after each upload."),
-            ("d", "Email the team whenever a file is uploaded so they remember to run it."),
+            (
+                "a",
+                "Trigger ingestion from S3 event notifications that invoke a serverless function per new object.",
+            ),
+            (
+                "b",
+                "Poll the S3 bucket once every second from a dedicated always-on server that watches for any new files.",
+            ),
+            (
+                "c",
+                "Have an operator manually run the ingestion script by hand after each individual file upload.",
+            ),
+            (
+                "d",
+                "Email the team whenever a file is uploaded so that someone remembers to run the ingestion job.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "S3 event notifications invoking a serverless function process new files automatically with minimal standing infrastructure. Constant polling from an always-on server wastes resources, and manual script runs or email reminders reintroduce the human step the team wants to remove.",
@@ -1937,11 +2615,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Generate text descriptions/captions of images for indexing."),
-            ("b", "Transcribe audio to text (for example with Amazon Transcribe)."),
-            ("c", "Store the raw audio bytes directly as the embedding vector."),
-            ("d", "Rename files to include the word 'important'."),
-            ("e", "Increase the model temperature during ingestion."),
+            (
+                "a",
+                "Generate text descriptions or captions of the images so they can be embedded and indexed.",
+            ),
+            (
+                "b",
+                "Transcribe the audio recordings to text, for example with Amazon Transcribe, before indexing.",
+            ),
+            (
+                "c",
+                "Store the raw audio byte stream directly and treat those bytes as the embedding vector.",
+            ),
+            (
+                "d",
+                "Rename each media file so that its name includes the word important before indexing it.",
+            ),
+            (
+                "e",
+                "Increase the model's sampling temperature during the ingestion step to vary the output.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Transcribing audio and captioning images produces text that a text retrieval system can index and search. Raw bytes are not embeddings, renaming files adds no semantic content, and temperature is irrelevant to ingestion.",
@@ -1961,26 +2654,41 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Log the full document body so nothing is missed."),
+            (
+                "a",
+                "Log the full document body on every ingestion so that nothing about the record is ever missed.",
+            ),
             (
                 "b",
-                "Log structured events with non-sensitive identifiers and redact sensitive content.",
+                "Log structured events with non-sensitive identifiers and redact the sensitive content first.",
             ),
-            ("c", "Log everything but store the logs in a public bucket for easy access."),
-            ("d", "Disable logging entirely to avoid any risk."),
+            (
+                "c",
+                "Log everything verbatim but store the log files in a public S3 bucket for easy team access.",
+            ),
+            (
+                "d",
+                "Disable logging entirely across the pipeline so that no sensitive data can leak through logs.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Structured logs with non-sensitive identifiers and redacted content give debuggability without exposing personal or confidential data. Logging full bodies leaks sensitive data, a public bucket makes it worse, and disabling logging removes the diagnostics needed to debug.",
         "rationales": {
-            "a": (False, "Logging full document bodies leaks personal and confidential data."),
+            "a": (
+                False,
+                "Logging full document bodies writes sensitive content straight into the logs.",
+            ),
             "b": (
                 True,
-                "Structured, redacted logs keep diagnostics useful without exposing sensitive content.",
+                "Structured events with redaction keep logs useful without exposing sensitive data.",
             ),
-            "c": (False, "A public bucket for sensitive logs is a serious exposure."),
+            "c": (
+                False,
+                "A public log bucket exposes whatever sensitive content the logs contain.",
+            ),
             "d": (
                 False,
-                "Turning off logging removes the information needed to debug the failure.",
+                "Disabling logging removes the observability the pipeline needs to be reliable.",
             ),
         },
     },
@@ -1992,18 +2700,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Accept any ID and clean it up manually later."),
-            ("b", "Auto-correct unknown IDs to the nearest-looking valid ID."),
-            ("c", "Validate each objective ID against the known allowlist and reject unknown IDs."),
-            ("d", "Store unknown IDs as null and continue."),
+            (
+                "a",
+                "Accept any objective ID as given and plan to clean up the invalid ones by hand later on.",
+            ),
+            (
+                "b",
+                "Auto-correct each unknown objective ID to whichever valid ID looks closest to it textually.",
+            ),
+            (
+                "c",
+                "Validate each objective ID against the known allowlist and reject any ID that is not on it.",
+            ),
+            (
+                "d",
+                "Store unrecognized objective IDs as null in the record and let ingestion continue regardless.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Validating objective IDs against the known allowlist and rejecting unknown ones stops orphaned tags at the boundary. Auto-correcting guesses can mislabel content, accepting anything defers cleanup indefinitely, and nulling IDs silently loses the tag.",
         "rationales": {
-            "a": (False, "Accepting anything creates the orphaned tags you wanted to prevent."),
-            "b": (False, "Guess-based auto-correction can silently mislabel content."),
-            "c": (True, "Allowlist validation rejects unknown IDs at ingestion as intended."),
-            "d": (False, "Nulling the ID silently discards the tag and hides the error."),
+            "a": (False, "Accepting any ID defers the problem and lets bad IDs spread downstream."),
+            "b": (False, "Auto-correcting to the nearest-looking ID silently mislabels data."),
+            "c": (
+                True,
+                "Validating against the allowlist and rejecting unknown IDs is the required strict boundary.",
+            ),
+            "d": (False, "Coercing bad IDs to null hides the error instead of surfacing it."),
         },
     },
     {
@@ -2014,21 +2737,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so the model guesses the missing context."),
-            ("b", "Make each chunk the size of the whole document."),
-            ("c", "Remove overlap entirely and shrink chunks further."),
-            ("d", "Add a modest overlap between adjacent chunks so boundary context is preserved."),
+            (
+                "a",
+                "Raise the sampling temperature so the model can guess at the context missing from each chunk.",
+            ),
+            (
+                "b",
+                "Make each chunk as large as the entire source document so no boundary context is ever lost.",
+            ),
+            (
+                "c",
+                "Remove the overlap between chunks entirely and shrink the chunks even further for precision.",
+            ),
+            (
+                "d",
+                "Add a modest overlap between adjacent chunks so boundary context is preserved across splits.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "A modest overlap carries boundary context into the neighboring chunk so split definitions remain retrievable, while chunks stay bounded. Document-sized chunks defeat chunking, shrinking chunks worsens splitting, and temperature cannot recover context that was never retrieved.",
         "rationales": {
-            "a": (False, "Temperature cannot supply context that retrieval failed to include."),
+            "a": (False, "Temperature cannot recover context that the chunk boundary cut off."),
             "b": (
                 False,
-                "Whole-document chunks eliminate the benefits of chunking and bloat context.",
+                "Whole-document chunks destroy retrieval precision and may exceed limits.",
             ),
-            "c": (False, "Smaller non-overlapping chunks split definitions even more often."),
-            "d": (True, "Overlap preserves context that spans adjacent chunk boundaries."),
+            "c": (
+                False,
+                "Removing overlap and shrinking chunks worsens the lost-boundary problem.",
+            ),
+            "d": (True, "A modest overlap carries boundary context across adjacent chunks."),
         },
     },
     {
@@ -2039,18 +2777,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Record source version and ingestion run identifiers in chunk metadata."),
-            ("b", "Keep only the latest chunk and discard all history."),
-            ("c", "Store chunks without any identifiers to save space."),
-            ("d", "Rely on the engineer's memory of past runs."),
+            (
+                "a",
+                "Record the source version and ingestion run identifiers in each chunk's stored metadata.",
+            ),
+            (
+                "b",
+                "Keep only the most recently ingested chunk for each document and discard all prior history.",
+            ),
+            (
+                "c",
+                "Store the chunks without any identifiers at all to keep the index as small as possible.",
+            ),
+            (
+                "d",
+                "Rely on the engineer's own memory of which ingestion runs produced which chunks over time.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Recording source version and run identifiers in chunk metadata creates the lineage needed to trace a chunk to its origin. Discarding history, omitting identifiers, or relying on memory all destroy auditability.",
         "rationales": {
-            "a": (True, "Source-version and run IDs in metadata provide traceable lineage."),
-            "b": (False, "Keeping only the latest chunk erases the history auditors need."),
-            "c": (False, "Omitting identifiers makes tracing impossible."),
-            "d": (False, "Human memory is not a reliable or auditable record."),
+            "a": (
+                True,
+                "Source version and run identifiers make each chunk traceable and reproducible.",
+            ),
+            "b": (False, "Discarding history makes past results impossible to reproduce."),
+            "c": (False, "Chunks without identifiers cannot be traced back to a source or run."),
+            "d": (False, "Human memory is not a reliable or auditable lineage record."),
         },
     },
     {
@@ -2061,21 +2814,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Increase embedding dimensionality to absorb the noise."),
+            (
+                "a",
+                "Increase the embedding dimensionality so the vectors can absorb the garbled-character noise.",
+            ),
             (
                 "b",
                 "Normalize encoding to UTF-8 and clean whitespace and control characters during ingestion.",
             ),
-            ("c", "Lower retrieval top-k to hide noisy chunks."),
-            ("d", "Raise temperature so the model smooths over garbled text."),
+            (
+                "c",
+                "Lower the retrieval top-k so that the chunks full of garbled characters surface less often.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature so the model smooths over the garbled text while answering.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Normalizing to UTF-8 and cleaning whitespace and control characters removes the noise at the source so embeddings and search improve. Larger embeddings, lower top-k, and higher temperature do not fix garbled source text.",
         "rationales": {
-            "a": (False, "More embedding dimensions do not clean garbled input text."),
-            "b": (True, "Encoding normalization and whitespace cleanup fix the noise directly."),
-            "c": (False, "Lowering top-k hides symptoms rather than fixing the text."),
-            "d": (False, "Temperature cannot repair corrupted characters in the source."),
+            "a": (
+                False,
+                "A larger embedding dimension does not clean up garbled source characters.",
+            ),
+            "b": (
+                True,
+                "Normalizing to UTF-8 and cleaning control characters fixes the garbled text at the source.",
+            ),
+            "c": (False, "Lowering top-k hides noisy chunks rather than cleaning them."),
+            "d": (False, "Temperature cannot repair corrupted characters in the stored text."),
         },
     },
     {
@@ -2086,30 +2854,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Stream both sources continuously regardless of need."),
-            ("b", "Batch both sources once a week to keep the pipeline simple."),
+            (
+                "a",
+                "Stream both the compliance feed and the historical archive continuously, whether needed or not.",
+            ),
+            (
+                "b",
+                "Batch-load both the compliance feed and the historical archive just once a week for simplicity.",
+            ),
             (
                 "c",
-                "Stream the compliance feed in near real time and batch-load the historical archive.",
+                "Stream the compliance feed in near real time and batch-load the large historical archive once.",
             ),
-            ("d", "Load the compliance feed manually at the end of each month."),
+            (
+                "d",
+                "Load the compliance feed manually at the end of each month alongside the archive import.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Streaming the latency-sensitive compliance feed while batching the non-urgent archive matches each source's actual requirement. Weekly batching misses the seconds-level need, streaming everything over-engineers the archive, and monthly manual loads violate the compliance timeliness requirement.",
         "rationales": {
-            "a": (
-                False,
-                "Streaming the archive adds complexity for data that is not time-sensitive.",
-            ),
-            "b": (False, "Weekly batching cannot meet the seconds-level compliance requirement."),
+            "a": (False, "Streaming the static archive wastes effort on data that never changes."),
+            "b": (False, "Weekly batching makes the time-sensitive compliance feed far too stale."),
             "c": (
                 True,
-                "Near-real-time streaming for the urgent feed and batch for the archive fits both needs.",
+                "Streaming the live feed and batching the archive matches each source to its update pattern.",
             ),
-            "d": (
-                False,
-                "Monthly manual loading badly misses the compliance timeliness requirement.",
-            ),
+            "d": (False, "Monthly manual loads make the compliance feed dangerously out of date."),
         },
     },
     {
@@ -2120,12 +2891,21 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Retry the entire 10,000-file job from scratch repeatedly until zero failures."),
-            ("b", "Abort the entire job on the first parse error and start over."),
-            ("c", "Silently skip failed files and never record them."),
+            (
+                "a",
+                "Retry the entire 10,000-file job from scratch repeatedly until a run finishes with zero failures.",
+            ),
+            (
+                "b",
+                "Abort the whole job on the first parse error encountered and then start the entire run over.",
+            ),
+            (
+                "c",
+                "Silently skip any file that fails to parse and never record which files were skipped or why.",
+            ),
             (
                 "d",
-                "Process the batch resiliently, isolate failed files to a dead-letter path, and report them for follow-up.",
+                "Process the batch resiliently, send failed files to a dead-letter path, and report them for follow-up.",
             ),
         ],
         "correct_option_ids": ["d"],
@@ -2133,16 +2913,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "rationales": {
             "a": (
                 False,
-                "Repeating the full 10,000-file job will keep failing on the same 12 files.",
+                "Full restarts reprocess thousands of already-good files and may never converge.",
             ),
             "b": (
                 False,
-                "Aborting on the first error forces a costly full restart over 12 bad files.",
+                "Aborting on the first error wastes all the successful work in the batch.",
             ),
-            "c": (False, "Silently skipping failures loses visibility into what was missed."),
+            "c": (False, "Silently skipping failures loses data and hides the problem."),
             "d": (
                 True,
-                "Dead-lettering failures with a report keeps the batch flowing and records problems.",
+                "Isolating failures to a dead-letter path keeps good work and surfaces the bad files.",
             ),
         },
     },
@@ -2154,18 +2934,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Amazon Bedrock Knowledge Bases with a managed vector store."),
-            ("b", "A self-hosted vector database on EC2 that they patch and scale."),
-            ("c", "A spreadsheet of document texts searched by keyword."),
-            ("d", "Storing embeddings in flat files on a laptop."),
+            (
+                "a",
+                "Amazon Bedrock Knowledge Bases backed by a fully managed vector store for the team.",
+            ),
+            (
+                "b",
+                "A self-hosted vector database running on EC2 that the small team patches and scales itself.",
+            ),
+            (
+                "c",
+                "A spreadsheet of the document texts that the application searches by simple keyword matching.",
+            ),
+            (
+                "d",
+                "Embeddings written to flat files kept on a single developer's laptop for the whole corpus.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Bedrock Knowledge Bases provides managed embedding, storage, and retrieval, minimizing vector-store operations for a small team. A self-hosted database on EC2 is high ops, a keyword spreadsheet is not semantic search, and laptop flat files do not scale or persist reliably.",
         "rationales": {
-            "a": (True, "Knowledge Bases removes the operational work of running a vector store."),
-            "b": (False, "A self-hosted EC2 database is exactly the operational burden to avoid."),
-            "c": (False, "A keyword spreadsheet provides no semantic vector search."),
-            "d": (False, "Laptop flat files are not durable, scalable, or production-ready."),
+            "a": (
+                True,
+                "Knowledge Bases provides a managed vector store with minimal operational burden.",
+            ),
+            "b": (
+                False,
+                "A self-hosted cluster is exactly the operational load the small team wants to avoid.",
+            ),
+            "c": (
+                False,
+                "A keyword-searched spreadsheet does not provide semantic vector retrieval.",
+            ),
+            "d": (False, "Flat files on a laptop are neither durable, shared, nor scalable."),
         },
     },
     {
@@ -2176,24 +2977,42 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Stand up a separate OpenSearch cluster solely for vectors."),
-            ("b", "Add the pgvector extension to the existing Aurora PostgreSQL database."),
-            ("c", "Store vectors in Amazon S3 as JSON and scan them on each query."),
-            ("d", "Keep vectors in application memory only."),
+            (
+                "a",
+                "Stand up a separate OpenSearch cluster used solely for storing and searching the vectors.",
+            ),
+            (
+                "b",
+                "Add the pgvector extension to the existing Aurora PostgreSQL database the team already runs.",
+            ),
+            (
+                "c",
+                "Store the vectors in Amazon S3 as JSON objects and scan them all on every single query.",
+            ),
+            (
+                "d",
+                "Keep the vectors only in the application process memory to avoid any extra data system.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Using pgvector in the existing Aurora PostgreSQL keeps vectors alongside the relational data with minimal new infrastructure and tight consistency. A separate OpenSearch cluster adds infrastructure and a sync gap, S3 JSON scans do not scale for similarity search, and in-memory vectors are not durable.",
         "rationales": {
             "a": (
                 False,
-                "A separate OpenSearch cluster adds infrastructure and a consistency/sync gap.",
+                "A separate OpenSearch cluster adds a new system to operate when one is not needed.",
             ),
             "b": (
                 True,
-                "pgvector in the existing Aurora database reuses infrastructure and stays consistent with the rows.",
+                "pgvector in the existing Aurora database adds vector search without a new data system.",
             ),
-            "c": (False, "Scanning JSON in S3 does not scale for vector similarity search."),
-            "d": (False, "In-memory vectors vanish on restart and are not durable."),
+            "c": (
+                False,
+                "Scanning JSON in S3 on every query is slow and does not scale as a vector store.",
+            ),
+            "d": (
+                False,
+                "In-memory-only vectors are lost on restart and cannot grow or be shared.",
+            ),
         },
     },
     {
@@ -2204,27 +3023,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Rely on each client to pass the correct tenant filter and trust it."),
-            ("b", "Ask the model to ignore results from other tenants."),
+            (
+                "a",
+                "Rely on each client application to pass the correct tenant filter and trust whatever it sends.",
+            ),
+            (
+                "b",
+                "Add a system-prompt instruction asking the model to ignore results from other tenants.",
+            ),
             (
                 "c",
-                "Enforce a mandatory tenant-ID metadata filter on every query, applied server-side.",
+                "Enforce a mandatory tenant-ID metadata filter on every query, applied on the server side.",
             ),
-            ("d", "Sort results so the current tenant's chunks appear first."),
+            (
+                "d",
+                "Sort the mixed results so the current tenant's chunks appear first in the returned list.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "A mandatory server-side tenant-ID filter on every query structurally excludes other tenants' vectors from the candidate set. Asking the model to ignore results still retrieves them, trusting the client filter can be bypassed, and sorting still returns other tenants' chunks.",
         "rationales": {
-            "a": (False, "Trusting a client-supplied filter can be forged or omitted."),
+            "a": (
+                False,
+                "Trusting the client to filter lets a buggy or malicious client cross tenants.",
+            ),
             "b": (
                 False,
-                "The model ignoring results does not stop them from being retrieved and exposed.",
+                "Asking the model to ignore other tenants is not an enforceable access control.",
             ),
-            "c": (
-                True,
-                "A server-enforced tenant filter removes other tenants' data from retrieval entirely.",
-            ),
-            "d": (False, "Sorting still includes other tenants' chunks in the results."),
+            "c": (True, "A server-enforced tenant-ID filter guarantees isolation on every query."),
+            "d": (False, "Sorting still returns other tenants' chunks, which is a data leak."),
         },
     },
     {
@@ -2235,9 +3063,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Add more replicas to the vector store."),
-            ("b", "Rebuild the full index every 12 hours instead of 24."),
-            ("c", "Increase retrieval top-k so new documents are more likely to appear."),
+            (
+                "a",
+                "Add more read replicas to the vector store so queries are served from more copies of the index.",
+            ),
+            (
+                "b",
+                "Rebuild the full index every 12 hours instead of every 24 to narrow the staleness window.",
+            ),
+            (
+                "c",
+                "Increase the retrieval top-k so that any newly added documents are more likely to appear.",
+            ),
             (
                 "d",
                 "Switch to incremental, event-driven indexing that upserts new documents as they arrive.",
@@ -2246,10 +3083,13 @@ QUESTIONS: list[dict[str, Any]] = [
         "correct_option_ids": ["d"],
         "explanation": "Event-driven incremental upserts make each new document searchable within minutes rather than waiting for a scheduled rebuild. A 12-hour rebuild still lags badly, top-k cannot surface documents that are not yet indexed, and replicas improve throughput not freshness.",
         "rationales": {
-            "a": (False, "Replicas add read capacity, not indexing freshness."),
-            "b": (False, "A 12-hour cycle still leaves content unsearchable for hours."),
-            "c": (False, "Top-k cannot retrieve a document that has not been indexed yet."),
-            "d": (True, "Incremental event-driven upserts index new documents in minutes."),
+            "a": (False, "More replicas serve the same stale data faster, not fresher data."),
+            "b": (
+                False,
+                "A shorter full-rebuild cycle reduces but does not eliminate the staleness gap.",
+            ),
+            "c": (False, "Raising top-k cannot surface documents that are not yet in the index."),
+            "d": (True, "Event-driven upserts make new documents searchable almost immediately."),
         },
     },
     {
@@ -2260,20 +3100,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Returning a source reference so the answer can be cited."),
-            ("b", "Filtering results to a department, date range, or document type."),
-            ("c", "Changing the model's temperature per query."),
-            ("d", "Compressing the embedding vector to save space."),
-            ("e", "Encrypting the network connection to the store."),
+            (
+                "a",
+                "Returning a source reference with each hit so the generated answer can be cited.",
+            ),
+            (
+                "b",
+                "Filtering results to a specific department, date range, or document type at query time.",
+            ),
+            (
+                "c",
+                "Changing the model's sampling temperature on a per-query basis as results come back.",
+            ),
+            (
+                "d",
+                "Compressing the stored embedding vector itself to reduce the index's disk footprint.",
+            ),
+            (
+                "e",
+                "Encrypting the network connection between the application and the vector store service.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Metadata enables filtering retrieval to a scope and returning source references for citations. Temperature, vector compression, and transport encryption are unrelated to what metadata provides at retrieval time.",
         "rationales": {
-            "a": (True, "Stored source metadata lets the answer cite its origin."),
-            "b": (True, "Metadata filters narrow retrieval to the relevant scope."),
-            "c": (False, "Temperature is an inference parameter, not a metadata use."),
+            "a": (True, "A stored source reference lets the answer be cited back to its origin."),
+            "b": (
+                True,
+                "Metadata filters scope results by attributes like department, date, or type.",
+            ),
+            "c": (False, "Temperature is a generation setting, not a use of stored metadata."),
             "d": (False, "Vector compression is a storage concern, not a metadata use."),
-            "e": (False, "Transport encryption is a networking concern unrelated to metadata."),
+            "e": (False, "Transport encryption is a security control unrelated to metadata."),
         },
     },
     {
@@ -2286,25 +3144,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "ANN trades some recall for speed; raise search parameters (for example ef) to improve recall at some latency cost.",
+                "ANN trades some recall for speed; raise search parameters like ef to recover recall at some latency cost.",
             ),
-            ("b", "The embeddings are corrupted and must be regenerated."),
-            ("c", "The model temperature is too high and should be lowered."),
-            ("d", "The vector store is out of disk space."),
+            (
+                "b",
+                "The embeddings in the index are corrupted and the whole corpus must be regenerated from scratch.",
+            ),
+            (
+                "c",
+                "The model's sampling temperature is set too high and should be lowered to improve recall.",
+            ),
+            (
+                "d",
+                "The vector store has run out of disk space, which is silently dropping some of the results.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Approximate nearest neighbor search sacrifices some recall for speed, and increasing search-effort parameters recovers recall at a latency cost. Corrupted embeddings would break results entirely, temperature is unrelated to retrieval, and disk space does not explain approximate recall behavior.",
         "rationales": {
             "a": (
                 True,
-                "ANN is approximate by design; higher search effort improves recall at some latency cost.",
+                "Approximate search trades recall for speed; raising ef restores recall at a latency cost.",
             ),
             "b": (
                 False,
-                "Corrupted embeddings would produce broadly wrong results, not minor recall misses.",
+                "Corrupted embeddings are not implied by an approximate-search recall gap.",
             ),
-            "c": (False, "Temperature affects generation, not vector retrieval recall."),
-            "d": (False, "Disk space does not cause ANN's approximate recall characteristic."),
+            "c": (False, "Temperature affects generation, not approximate-search recall."),
+            "d": (False, "Disk exhaustion would cause errors, not a graceful recall tradeoff."),
         },
     },
     {
@@ -2315,24 +3182,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "A larger embedding model with no filtering support."),
+            (
+                "a",
+                "A larger embedding model with no support for filtering on structured attributes at all.",
+            ),
             (
                 "b",
-                "Combined vector similarity with metadata/attribute filtering in the same query.",
+                "Combined vector similarity and metadata attribute filtering evaluated in the same query.",
             ),
-            ("c", "Keyword-only search with no vectors."),
-            ("d", "Returning the entire index and filtering in the client."),
+            (
+                "c",
+                "Keyword-only search over the text with no vector similarity component involved at all.",
+            ),
+            (
+                "d",
+                "Returning the entire index to the client and applying the attribute filter there instead.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Supporting vector similarity plus metadata filtering in one query satisfies both the semantic and the hard-constraint parts efficiently. A bigger embedding model without filtering misses the constraints, keyword-only loses semantics, and returning the whole index to filter client-side does not scale.",
         "rationales": {
-            "a": (False, "Without filtering, the product and date constraints cannot be enforced."),
+            "a": (
+                False,
+                "A bigger model without filtering cannot enforce the structured attribute constraint.",
+            ),
             "b": (
                 True,
-                "Vector similarity combined with metadata filtering handles both query parts in the store.",
+                "Combining vector similarity with metadata filtering satisfies both needs in one query.",
             ),
-            "c": (False, "Keyword-only search drops the semantic matching the query needs."),
-            "d": (False, "Pulling the entire index to filter in the client does not scale."),
+            "c": (False, "Keyword-only search loses the semantic matching the use case requires."),
+            "d": (
+                False,
+                "Returning the whole index and filtering client-side is slow and does not scale.",
+            ),
         },
     },
     {
@@ -2351,21 +3233,33 @@ QUESTIONS: list[dict[str, Any]] = [
                 "b",
                 "After re-syncing, only the changed documents need re-embedding, not necessarily the whole corpus.",
             ),
-            ("c", "Raising the model temperature would refresh the content."),
-            ("d", "Making the S3 bucket public would refresh the index."),
-            ("e", "Increasing the embedding dimension would ingest the new files."),
+            (
+                "c",
+                "Raising the model's sampling temperature would cause the new content to be refreshed into the index.",
+            ),
+            (
+                "d",
+                "Making the backing S3 bucket public would cause the Knowledge Base to refresh its index.",
+            ),
+            (
+                "e",
+                "Increasing the embedding dimension would pull the new files into the existing index on its own.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Knowledge Bases serve the last ingested state, so a data-source sync is needed, and that sync re-embeds the changed documents rather than requiring a full rebuild. Temperature, bucket visibility, and embedding dimension have nothing to do with whether updated files were re-ingested.",
         "rationales": {
-            "a": (True, "A data-source sync re-ingests updated files so answers reflect them."),
+            "a": (
+                True,
+                "The index only reflects the last sync, so a new sync is needed to pick up updates.",
+            ),
             "b": (
                 True,
-                "Syncing re-embeds the changed documents, not necessarily the entire corpus.",
+                "A sync re-embeds just the changed documents rather than the entire corpus.",
             ),
-            "c": (False, "Temperature does not control whether new content was ingested."),
-            "d": (False, "Bucket visibility is unrelated to ingestion and unsafe to change."),
-            "e": (False, "Embedding dimension does not trigger ingestion of updated files."),
+            "c": (False, "Temperature has nothing to do with ingesting updated source files."),
+            "d": (False, "Bucket visibility does not trigger a Knowledge Base sync."),
+            "e": (False, "Embedding dimension does not cause new files to be ingested."),
         },
     },
     {
@@ -2376,21 +3270,42 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Delete older vectors regardless of relevance to shrink the index."),
-            ("b", "Keep one node and raise the query timeout."),
-            ("c", "Reduce top-k to one so queries are cheaper."),
+            (
+                "a",
+                "Delete older vectors regardless of their relevance just to shrink the index back down in size.",
+            ),
+            (
+                "b",
+                "Keep running a single node and simply raise the per-query timeout to tolerate slow responses.",
+            ),
+            (
+                "c",
+                "Reduce the retrieval top-k down to one so that each query touches far less of the index.",
+            ),
             (
                 "d",
-                "Scale out by sharding the index across nodes sized for the vector memory footprint.",
+                "Scale out by sharding the index across nodes sized for the vectors' memory footprint.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Sharding the index across appropriately sized nodes distributes the vector memory footprint and query load, which is the correct way to scale a large vector workload. Raising the timeout masks the problem, top-k of one harms recall, and deleting relevant data loses coverage.",
         "rationales": {
-            "a": (False, "Deleting relevant vectors loses coverage rather than scaling properly."),
-            "b": (False, "A longer timeout hides slowness without adding capacity."),
-            "c": (False, "Forcing top-k to one damages retrieval quality to dodge the real issue."),
-            "d": (True, "Sharding across suitably sized nodes distributes memory and query load."),
+            "a": (
+                False,
+                "Deleting relevant vectors sacrifices quality to work around a capacity problem.",
+            ),
+            "b": (
+                False,
+                "A single node with a longer timeout does not add the capacity the index needs.",
+            ),
+            "c": (
+                False,
+                "Cutting top-k to one degrades retrieval quality instead of adding capacity.",
+            ),
+            "d": (
+                True,
+                "Sharding across memory-sized nodes scales the index to handle the growth.",
+            ),
         },
     },
     {
@@ -2403,24 +3318,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "A shared index with an enforced tenant-ID metadata filter for logical isolation.",
+                "A shared index with an enforced tenant-ID metadata filter providing logical isolation.",
             ),
-            ("b", "A separate index/collection per tenant for strong physical isolation."),
-            ("c", "Lowering the model temperature per tenant."),
-            ("d", "Sorting results by tenant name alphabetically."),
-            ("e", "Letting the model decide which tenant a result belongs to."),
+            (
+                "b",
+                "A separate index or collection per tenant providing strong physical isolation of data.",
+            ),
+            (
+                "c",
+                "Lowering the model's sampling temperature on a per-tenant basis to keep answers separate.",
+            ),
+            (
+                "d",
+                "Sorting the combined results by tenant name alphabetically before returning them.",
+            ),
+            (
+                "e",
+                "Letting the model decide at generation time which tenant each returned result belongs to.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Per-tenant indexes give physical isolation, and a shared index with an enforced tenant filter gives logical isolation; both are valid with different cost and management tradeoffs. Temperature, alphabetical sorting, and model-decided ownership do not provide isolation.",
         "rationales": {
-            "a": (
-                True,
-                "A shared index with an enforced tenant filter provides logical isolation.",
-            ),
-            "b": (True, "Separate per-tenant indexes provide strong physical isolation."),
-            "c": (False, "Temperature is irrelevant to data isolation."),
-            "d": (False, "Alphabetical sorting does not isolate tenant data."),
-            "e": (False, "Letting the model infer ownership is not an isolation control."),
+            "a": (True, "A shared index with an enforced tenant filter gives logical isolation."),
+            "b": (True, "A per-tenant index gives strong physical isolation."),
+            "c": (False, "Temperature is a sampling setting and provides no isolation."),
+            "d": (False, "Sorting still returns other tenants' data, which is a leak."),
+            "e": (False, "Letting the model assign tenants is not an enforceable control."),
         },
     },
     {
@@ -2433,25 +3357,37 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "The new model's embedding dimension differs from the index's configured dimension.",
+                "The new embedding model's output dimension differs from the index's configured dimension.",
             ),
-            ("b", "The IAM role lost permission to write."),
-            ("c", "The temperature parameter is invalid."),
-            ("d", "The S3 bucket is in a different Region."),
+            (
+                "b",
+                "The IAM role used for writes lost its permission to put documents into the index.",
+            ),
+            (
+                "c",
+                "The temperature parameter passed on the write request is set to an invalid value.",
+            ),
+            (
+                "d",
+                "The backing S3 bucket for the vectors happens to have been created in a different Region than the index.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "A vector index is configured for a fixed dimension, so a new model that outputs a different dimension causes a mismatch on insert. Permissions, temperature, and bucket Region do not produce a dimension-mismatch error.",
         "rationales": {
             "a": (
                 True,
-                "The index's fixed dimension no longer matches the new model's output size.",
+                "A dimension mismatch between the new model and the index is the direct cause.",
             ),
-            "b": (False, "A permission error would be an access denial, not a dimension mismatch."),
+            "b": (
+                False,
+                "A lost write permission would raise an authorization error, not a dimension error.",
+            ),
             "c": (
                 False,
-                "Temperature is a generation parameter unrelated to vector insert dimensions.",
+                "Temperature is not part of a vector write and does not cause this error.",
             ),
-            "d": (False, "Bucket Region does not cause an embedding-dimension mismatch."),
+            "d": (False, "A Region mismatch is unrelated to vector dimension validation."),
         },
     },
     {
@@ -2462,24 +3398,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Set the fixed chunk size to the maximum allowed value."),
-            ("b", "Select a semantic or hierarchical chunking strategy over a fixed-size default."),
-            ("c", "Disable chunking so each document is one giant chunk."),
-            ("d", "Set the embedding temperature to zero."),
+            (
+                "a",
+                "Set the fixed chunk size to the maximum allowed value so each chunk holds as much as possible.",
+            ),
+            (
+                "b",
+                "Select a semantic or hierarchical chunking strategy instead of the fixed-size default.",
+            ),
+            (
+                "c",
+                "Disable chunking altogether so that each source document becomes a single giant chunk.",
+            ),
+            (
+                "d",
+                "Set the embedding temperature to zero so the chunks are vectorized more deterministically.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Choosing a semantic or hierarchical chunking strategy aligns boundaries with meaning and document structure. A maximum fixed size still cuts arbitrarily, one-chunk-per-document bloats context and hurts precision, and embeddings have no temperature setting.",
         "rationales": {
-            "a": (False, "A large fixed size still ignores document structure."),
+            "a": (False, "A maximum fixed size still splits arbitrarily and dilutes relevance."),
             "b": (
                 True,
-                "Semantic or hierarchical chunking respects structure rather than arbitrary cuts.",
+                "Semantic or hierarchical chunking aligns chunks with meaning for better retrieval.",
             ),
-            "c": (
-                False,
-                "A single giant chunk per document harms retrieval precision and bloats context.",
-            ),
-            "d": (False, "Embeddings do not have a temperature parameter."),
+            "c": (False, "One giant chunk per document destroys retrieval precision."),
+            "d": (False, "Embeddings have no temperature setting; this does not affect chunking."),
         },
     },
     {
@@ -2490,21 +3435,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The alphabetical order of the source text."),
-            ("b", "A hash-collision count between vectors."),
-            ("c", "Cosine similarity, which compares direction independent of magnitude."),
-            ("d", "The byte length of the serialized vector."),
+            (
+                "a",
+                "The alphabetical order of the underlying source text that each vector was produced from.",
+            ),
+            (
+                "b",
+                "A count of hash collisions detected between the stored vectors during index construction.",
+            ),
+            (
+                "c",
+                "Cosine similarity, which compares the direction of vectors independent of their magnitude.",
+            ),
+            (
+                "d",
+                "The byte length of each vector once it has been serialized for storage in the vector index.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Cosine similarity compares vector direction independent of magnitude, which fits text embeddings where orientation carries the meaning. Hash collisions, alphabetical order, and byte length are not similarity measures for embeddings.",
         "rationales": {
-            "a": (False, "Alphabetical order of text has nothing to do with vector similarity."),
-            "b": (False, "Hash-collision counts are not an embedding similarity metric."),
+            "a": (False, "Alphabetical order of source text is not a vector similarity measure."),
+            "b": (False, "Hash-collision counts have nothing to do with semantic similarity."),
             "c": (
                 True,
-                "Cosine similarity measures directional closeness, standard for text embeddings.",
+                "Cosine similarity compares direction and is standard for normalized embeddings.",
             ),
-            "d": (False, "Serialized byte length does not measure semantic similarity."),
+            "d": (False, "Serialized byte length does not measure semantic closeness."),
         },
     },
     {
@@ -2515,26 +3472,41 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Increase the similarity threshold to hide the chunks."),
-            ("b", "Lower top-k so the deleted content appears less often."),
-            ("c", "Ask the model to avoid mentioning the deleted user."),
-            ("d", "Propagate deletions to the vector index so derived chunks are removed too."),
+            (
+                "a",
+                "Increase the similarity threshold so the deleted user's chunks fall below it and stay hidden.",
+            ),
+            (
+                "b",
+                "Lower the retrieval top-k so the deleted content shows up in results far less frequently.",
+            ),
+            (
+                "c",
+                "Add a system-prompt instruction asking the model to avoid mentioning the deleted user at all.",
+            ),
+            (
+                "d",
+                "Propagate the deletion to the vector index so the derived chunks are actually removed too.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Deletion must propagate to the derived vectors in the index, or the content remains retrievable despite the source being gone. Lowering top-k, instructing the model, or raising thresholds only reduce the chance of surfacing it, not guarantee removal.",
         "rationales": {
             "a": (
                 False,
-                "A higher threshold can still surface the chunks and does not delete them.",
+                "A higher threshold only hides the chunks; the data still exists and can resurface.",
             ),
             "b": (
                 False,
-                "Lower top-k only reduces frequency; the data is still indexed and reachable.",
+                "Lowering top-k reduces appearances but does not delete the retained data.",
             ),
-            "c": (False, "Instructing the model does not delete the retrievable vectors."),
+            "c": (
+                False,
+                "A prompt instruction does not remove data and is not a deletion guarantee.",
+            ),
             "d": (
                 True,
-                "Removing the derived vectors ensures the deleted data is no longer retrievable.",
+                "Propagating the delete to the index actually removes the derived chunks as required.",
             ),
         },
     },
@@ -2548,11 +3520,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Move to self-managed OpenSearch for the control needed, accepting higher operational responsibility.",
+                "Move to self-managed OpenSearch for the control required, accepting the higher operational load.",
             ),
-            ("b", "Stay on the managed service and abandon the new requirements."),
-            ("c", "Run both systems permanently for every query to hedge."),
-            ("d", "Rebuild a vector store from scratch in-house to avoid any AWS service."),
+            (
+                "b",
+                "Stay on the managed service as-is and simply abandon the new retrieval requirements.",
+            ),
+            (
+                "c",
+                "Run both the managed and custom systems permanently for every query to hedge the decision.",
+            ),
+            (
+                "d",
+                "Rebuild an entirely new vector store in-house from scratch to avoid using any AWS service.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "When requirements exceed what the managed service exposes, moving to self-managed OpenSearch gains the needed control in exchange for more operational work, which is the balanced tradeoff. Abandoning requirements, running both for every query, or building from scratch are extreme and inefficient.",
@@ -2561,15 +3542,12 @@ QUESTIONS: list[dict[str, Any]] = [
                 True,
                 "Self-managed OpenSearch provides the control the new requirements need, at higher ops cost.",
             ),
-            "b": (
+            "b": (False, "Abandoning the requirements fails the business need outright."),
+            "c": (
                 False,
-                "Dropping valid requirements avoids the decision rather than addressing it.",
+                "Running both systems forever doubles cost and complexity with no payoff.",
             ),
-            "c": (False, "Running both systems per query doubles cost and complexity needlessly."),
-            "d": (
-                False,
-                "Building a vector store from scratch is costly and reinvents mature tooling.",
-            ),
+            "d": (False, "Building from scratch to avoid AWS is wasted effort with no benefit."),
         },
     },
     {
@@ -2580,24 +3558,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Keep the only copy on a single ephemeral node to save cost."),
+            (
+                "a",
+                "Keep the only copy of the index on a single ephemeral node to keep the running cost down.",
+            ),
             (
                 "b",
-                "Enable durable storage with snapshots/backups so the index can be restored without full re-embedding.",
+                "Enable durable storage with snapshots so the index can be restored without full re-embedding.",
             ),
-            ("c", "Re-embed from scratch after every failure as the standard recovery."),
-            ("d", "Lower the embedding dimension so rebuilds are faster."),
+            (
+                "c",
+                "Re-embed the entire corpus from scratch after every failure as the standard recovery path.",
+            ),
+            (
+                "d",
+                "Lower the embedding dimension so that rebuilding the index after a loss is faster each time.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Durable storage with snapshots lets the team restore the index quickly instead of re-embedding for 10 hours after a failure. A single ephemeral node invites data loss, full re-embedding as the recovery path is slow and costly, and reducing dimensions degrades quality to shave rebuild time.",
         "rationales": {
-            "a": (False, "A single ephemeral copy maximizes data-loss risk."),
-            "b": (True, "Snapshots and durable storage enable fast restore without re-embedding."),
-            "c": (
-                False,
-                "Routine full re-embedding is exactly the slow, costly recovery to avoid.",
+            "a": (False, "A single ephemeral copy means total loss of the index on failure."),
+            "b": (
+                True,
+                "Durable snapshots let you restore the index without re-embedding everything.",
             ),
-            "d": (False, "Shrinking dimensions trades retrieval quality for faster rebuilds."),
+            "c": (False, "Re-embedding from scratch every failure is slow and costly recovery."),
+            "d": (
+                False,
+                "A smaller dimension speeds rebuilds but still assumes you lost the index.",
+            ),
         },
     },
     {
@@ -2608,21 +3598,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raising the model temperature when filters are present."),
-            ("b", "Storing metadata only as free text in the chunk body."),
+            (
+                "a",
+                "Raise the model's sampling temperature whenever a metadata filter is present on the query.",
+            ),
+            (
+                "b",
+                "Store the filterable metadata only as free text inside the chunk body rather than as fields.",
+            ),
             (
                 "c",
-                "Indexing the filtered metadata fields so the pre-filter uses an index rather than a full scan.",
+                "Index the filtered metadata fields so the pre-filter uses an index instead of a full scan.",
             ),
-            ("d", "Returning all vectors and applying the filter in the client."),
+            (
+                "d",
+                "Return all vectors to the client and apply the metadata filter there on the caller's side.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Indexing the metadata fields lets the pre-filter use an index instead of scanning every vector, keeping it efficient at scale. Free-text-only metadata cannot be filtered efficiently, temperature is irrelevant, and client-side filtering of all vectors does not scale.",
         "rationales": {
-            "a": (False, "Temperature has no bearing on filter performance."),
-            "b": (False, "Free-text-in-body metadata cannot be filtered efficiently."),
-            "c": (True, "Indexed metadata fields let the pre-filter avoid a full scan."),
-            "d": (False, "Pulling all vectors to the client to filter does not scale."),
+            "a": (False, "Temperature does not affect how a metadata filter is evaluated."),
+            "b": (False, "Free-text metadata in the body cannot be filtered efficiently."),
+            "c": (True, "Indexing the filter fields lets the pre-filter avoid a full scan."),
+            "d": (
+                False,
+                "Returning everything and filtering client-side is slow and does not scale.",
+            ),
         },
     },
     {
@@ -2633,23 +3635,41 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "The team already operates PostgreSQL and wants to avoid a new data system."),
-            ("b", "Vectors should live beside existing relational rows and share transactions."),
-            ("c", "You need the absolute highest-scale billion-vector search above all else."),
-            ("d", "You want a fully serverless managed RAG with zero database to run."),
-            ("e", "You need to render charts in the UI."),
+            (
+                "a",
+                "The team already operates PostgreSQL and wants to avoid standing up a new data system.",
+            ),
+            (
+                "b",
+                "Vectors should live beside the existing relational rows and share the same transactions.",
+            ),
+            (
+                "c",
+                "You need the absolute highest-scale billion-vector search above every other concern.",
+            ),
+            (
+                "d",
+                "You want a fully serverless managed RAG stack with no database for the team to run.",
+            ),
+            (
+                "e",
+                "You need to render interactive charts and dashboards directly in the application UI.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "pgvector shines when vectors should sit next to relational data with shared transactions and the team already runs PostgreSQL. Extreme billion-vector scale may favor a specialized engine, zero-database managed RAG points to Knowledge Bases, and UI charting is unrelated.",
         "rationales": {
-            "a": (True, "Reusing existing PostgreSQL avoids operating a separate data system."),
+            "a": (True, "Reusing the existing PostgreSQL avoids introducing a new data system."),
             "b": (
                 True,
-                "Co-locating vectors with relational rows and transactions is a pgvector strength.",
+                "pgvector keeps vectors beside relational rows and in the same transactions.",
             ),
-            "c": (False, "Extreme scale may be better served by a purpose-built vector engine."),
-            "d": (False, "Zero-database managed RAG is the Knowledge Bases story, not pgvector."),
-            "e": (False, "Chart rendering is a UI concern, not a vector-store fit."),
+            "c": (
+                False,
+                "Billion-vector extreme scale favors a dedicated vector engine, not pgvector.",
+            ),
+            "d": (False, "Zero-database serverless RAG points to a managed service, not Aurora."),
+            "e": (False, "Chart rendering is a UI concern unrelated to vector store choice."),
         },
     },
     {
@@ -2660,26 +3680,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise top-k to compensate for the mixed vectors."),
-            ("b", "Embed only new documents with the new model and leave the rest."),
-            ("c", "Keep two embedding spaces in one index and compare across them."),
+            (
+                "a",
+                "Raise the retrieval top-k to compensate for the mix of old and new embedding vectors.",
+            ),
+            (
+                "b",
+                "Embed only the newly added documents with the new model and leave the rest unchanged.",
+            ),
+            (
+                "c",
+                "Keep both embedding spaces in a single index and compare similarity across the two of them.",
+            ),
             (
                 "d",
-                "Re-embed the entire corpus with the new model so the whole index shares one embedding space.",
+                "Re-embed the whole corpus with the new model so the entire index shares one vector space.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Similarity is only valid within one embedding space, so the whole corpus must be re-embedded with the new model to benefit correctly. Partial re-embedding or mixing two spaces produces incomparable vectors, and top-k cannot reconcile incompatible embeddings.",
         "rationales": {
-            "a": (False, "Top-k cannot fix the incompatibility of mixed embedding spaces."),
-            "b": (False, "Mixing old and new embeddings in one index yields incomparable vectors."),
-            "c": (
+            "a": (
                 False,
-                "Comparing across two embedding spaces produces meaningless similarities.",
+                "Higher top-k cannot reconcile vectors from two incompatible embedding spaces.",
             ),
+            "b": (
+                False,
+                "Mixing old and new embeddings in one index breaks similarity comparisons.",
+            ),
+            "c": (False, "Comparing across two different embedding spaces is not meaningful."),
             "d": (
                 True,
-                "Re-embedding the full corpus keeps the index in one comparable embedding space.",
+                "Re-embedding everything with the new model restores one consistent space.",
             ),
         },
     },
@@ -2691,21 +3723,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Map the field as a k-NN vector type with the correct dimension and reindex."),
-            ("b", "Increase the cluster's disk size."),
-            ("c", "Change the model temperature."),
-            ("d", "Store the vectors as strings instead."),
+            (
+                "a",
+                "Map the vector field as a k-NN type with the correct dimension and reindex the documents.",
+            ),
+            (
+                "b",
+                "Increase the OpenSearch cluster's disk size so the vector field has more room to store data.",
+            ),
+            (
+                "c",
+                "Change the model's sampling temperature so the vectors are written in a compatible format.",
+            ),
+            (
+                "d",
+                "Store the vectors as plain strings in a text field instead of as a numeric vector type.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "OpenSearch similarity search requires the field mapped as a k-NN vector type with the right dimension, so correcting the mapping and reindexing fixes it. Disk size, temperature, and storing vectors as strings do not enable vector similarity search.",
         "rationales": {
             "a": (
                 True,
-                "Mapping the field as a k-NN vector type with correct dimension enables similarity search.",
+                "Mapping the field as a k-NN vector type with the right dimension enables vector search.",
             ),
-            "b": (False, "Disk size does not determine whether the field supports vector search."),
-            "c": (False, "Temperature is a generation parameter, irrelevant to field mapping."),
-            "d": (False, "Storing vectors as strings makes similarity search impossible."),
+            "b": (False, "More disk does not make an unmapped field searchable as vectors."),
+            "c": (False, "Temperature has no bearing on the index field mapping."),
+            "d": (False, "Vectors stored as strings cannot be searched with k-NN."),
         },
     },
     {
@@ -2716,18 +3760,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Give the role full admin so it never hits a permission error."),
-            ("b", "Scope the role to read/query only and remove delete and admin permissions."),
-            ("c", "Share one powerful role across all applications."),
-            ("d", "Disable IAM checks on the index for simplicity."),
+            (
+                "a",
+                "Give the application role full admin on the store so it never encounters a permission error.",
+            ),
+            (
+                "b",
+                "Scope the role to read and query only, removing its delete and administrative permissions.",
+            ),
+            (
+                "c",
+                "Share one broadly powerful role across every application that touches the vector store.",
+            ),
+            (
+                "d",
+                "Disable IAM authorization checks on the index entirely to keep the setup simple to operate.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Least privilege means scoping the role to only the query actions it needs and removing delete and admin rights. Full admin, a shared powerful role, and disabling IAM all expand the blast radius rather than reduce it.",
         "rationales": {
-            "a": (False, "Full admin grants far more than needed and widens the blast radius."),
-            "b": (True, "Query-only permissions match the role's actual function and limit risk."),
-            "c": (False, "A shared powerful role violates least privilege and isolation."),
-            "d": (False, "Disabling IAM checks removes access control entirely."),
+            "a": (
+                False,
+                "Full admin violates least privilege and risks accidental destructive actions.",
+            ),
+            "b": (
+                True,
+                "Scoping the role to read/query only follows least privilege for a query app.",
+            ),
+            "c": (False, "One shared powerful role spreads excessive privilege across apps."),
+            "d": (False, "Disabling IAM checks removes the access control entirely."),
         },
     },
     {
@@ -2738,18 +3800,30 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise the model temperature."),
-            ("b", "Add more retrieved passages per query."),
-            ("c", "Co-locate the vector store in the same Region as the application."),
-            ("d", "Increase the embedding dimension."),
+            (
+                "a",
+                "Raise the model's sampling temperature so responses are produced a little faster per call.",
+            ),
+            (
+                "b",
+                "Add several more retrieved passages per query so each round trip returns more content.",
+            ),
+            (
+                "c",
+                "Co-locate the vector store in the same Region as the application to cut network latency.",
+            ),
+            (
+                "d",
+                "Increase the embedding dimension so each similarity lookup resolves more quickly per query.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Placing the vector store in the same Region as the application removes cross-Region network latency from each query. More passages, higher temperature, and larger embeddings do not reduce the network round-trip and some increase latency.",
         "rationales": {
-            "a": (False, "Temperature is unrelated to retrieval network latency."),
-            "b": (False, "More passages add tokens and latency rather than reducing it."),
-            "c": (True, "Same-Region co-location removes cross-Region hops from the query path."),
-            "d": (False, "A larger embedding dimension can increase, not decrease, query cost."),
+            "a": (False, "Temperature does not change network or retrieval latency."),
+            "b": (False, "More passages per query add tokens and latency, not less."),
+            "c": (True, "Same-Region co-location removes cross-Region network round-trip latency."),
+            "d": (False, "A larger embedding dimension makes lookups slower, not faster."),
         },
     },
     {
@@ -2760,20 +3834,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "The vector dimension changed between write and read."),
-            ("b", "The embedding model randomly dropped the document."),
-            ("c", "The query temperature was too low."),
-            ("d", "Index refresh/eventual-consistency delay before new vectors become searchable."),
+            (
+                "a",
+                "The vector's dimension silently changed between the write request and the later read request.",
+            ),
+            (
+                "b",
+                "The embedding model randomly decided to drop the document instead of indexing it at all.",
+            ),
+            (
+                "c",
+                "The query's sampling temperature was set too low for the new document to be returned.",
+            ),
+            (
+                "d",
+                "An index refresh or eventual-consistency delay before new vectors become searchable.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Many vector stores have an index refresh interval, so a newly written document becomes searchable only after a short consistency delay. A random drop would be permanent, temperature is unrelated to retrieval, and a dimension change would raise errors rather than a brief delay.",
         "rationales": {
-            "a": (False, "A dimension change would cause errors, not a temporary miss."),
-            "b": (False, "A dropped document would not appear later on its own."),
-            "c": (False, "Temperature does not affect whether a vector is searchable."),
+            "a": (
+                False,
+                "A dimension change would raise an error, not a brief invisibility of a new write.",
+            ),
+            "b": (False, "Embedding models do not randomly drop documents."),
+            "c": (
+                False,
+                "Temperature does not control whether a freshly written vector is searchable.",
+            ),
             "d": (
                 True,
-                "An index refresh or eventual-consistency window explains the brief delay before searchability.",
+                "A short refresh or eventual-consistency delay explains the temporary invisibility.",
             ),
         },
     },
@@ -2785,21 +3877,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Apply a metadata filter on the product attribute in the retrieval request."),
-            ("b", "Re-ingest only that product's documents before every query."),
-            ("c", "Ask the model to ignore other products in the prompt."),
-            ("d", "Lower top-k until mostly the right product appears."),
+            (
+                "a",
+                "Apply a metadata filter on the product attribute within the retrieval request itself.",
+            ),
+            (
+                "b",
+                "Re-ingest only that one product's documents into the index before every single query.",
+            ),
+            (
+                "c",
+                "Add a system-prompt instruction telling the model to ignore the other products' content.",
+            ),
+            (
+                "d",
+                "Lower the retrieval top-k gradually until mostly the right product's chunks come back.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "A metadata filter on the product attribute constrains retrieval to the selected product precisely and efficiently. Re-ingesting per query is wasteful, prompting the model to ignore results still retrieves them, and lowering top-k does not enforce the product constraint.",
         "rationales": {
             "a": (
                 True,
-                "A metadata filter on the product attribute scopes retrieval exactly to the selection.",
+                "A metadata filter on the product attribute scopes retrieval precisely at query time.",
             ),
-            "b": (False, "Re-ingesting per query is enormously wasteful and slow."),
-            "c": (False, "Telling the model to ignore results still retrieves off-product chunks."),
-            "d": (False, "Lower top-k does not reliably exclude the wrong product."),
+            "b": (False, "Re-ingesting per query is wildly expensive and unnecessary."),
+            "c": (
+                False,
+                "A prompt instruction does not stop irrelevant products from being retrieved.",
+            ),
+            "d": (
+                False,
+                "Lowering top-k drops relevant chunks without reliably scoping by product.",
+            ),
         },
     },
     {
@@ -2810,24 +3920,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Fine-tune a model weekly on all 50,000 documents."),
+            (
+                "a",
+                "Fine-tune the model every week on all 50,000 documents so the latest content is in its weights.",
+            ),
             (
                 "b",
-                "Retrieval-augmented generation over an index that is kept in sync with the documents.",
+                "Retrieval-augmented generation over an index that is kept in sync with the source documents.",
             ),
-            ("c", "Stuff all 50,000 documents into every prompt."),
-            ("d", "Train a new model from scratch each week on the corpus."),
+            (
+                "c",
+                "Stuff all 50,000 documents into every single prompt using a very large context window.",
+            ),
+            (
+                "d",
+                "Train a brand-new model from scratch each week on the full corpus of 50,000 documents.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "RAG grounds answers in retrieved passages, supports citations, and stays current by syncing the index, meeting all three requirements. Weekly fine-tuning cannot produce citations and lags updates, prompt-stuffing 50,000 documents is impossible, and training from scratch weekly is wildly impractical.",
         "rationales": {
             "a": (
                 False,
-                "Weekly fine-tuning provides no citations and cannot track weekly changes well.",
+                "Weekly fine-tuning cannot keep pace with updates and gives no citations.",
             ),
-            "b": (True, "RAG grounds and cites answers and stays current by syncing the index."),
-            "c": (False, "Fifty thousand documents cannot fit in a prompt."),
-            "d": (False, "Training from scratch weekly is infeasible in cost and time."),
+            "b": (True, "RAG over a synced index provides current answers with source citations."),
+            "c": (False, "Fifty thousand documents cannot fit in a prompt on every request."),
+            "d": (
+                False,
+                "Training from scratch weekly is enormously expensive and still gives no citations.",
+            ),
         },
     },
     {
@@ -2838,24 +3960,42 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Keyword search alone."),
-            ("b", "Semantic search alone with a larger embedding model."),
+            (
+                "a",
+                "Keyword search alone over the text, matching only the exact product codes that users type in.",
+            ),
+            (
+                "b",
+                "Semantic vector search alone, using a larger embedding model to try to improve the matches.",
+            ),
             (
                 "c",
-                "Hybrid search combining semantic (vector) retrieval with keyword/BM25 matching.",
+                "Hybrid search that combines semantic vector retrieval with keyword or BM25 matching.",
             ),
-            ("d", "Raising temperature so the model guesses the codes."),
+            (
+                "d",
+                "Raise the sampling temperature so the model guesses the exact product codes itself.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Hybrid search blends vector semantics with keyword/BM25 so it catches both conceptual matches and exact identifiers. Semantic-only often misses rare exact tokens even with a bigger model, keyword-only loses conceptual recall, and temperature cannot retrieve a code that was not matched.",
         "rationales": {
-            "a": (False, "Keyword-only drops the conceptual questions."),
-            "b": (False, "A bigger embedding model still struggles with rare exact identifiers."),
+            "a": (
+                False,
+                "Keyword-only search misses semantically similar wording that differs from the codes.",
+            ),
+            "b": (
+                False,
+                "Semantic-only search can miss exact codes that keyword matching would catch.",
+            ),
             "c": (
                 True,
-                "Hybrid retrieval captures both conceptual meaning and exact token matches.",
+                "Hybrid search combines semantic recall with exact keyword matching for both needs.",
             ),
-            "d": (False, "Temperature cannot make retrieval find an unmatched exact code."),
+            "d": (
+                False,
+                "Temperature cannot make the model reliably produce exact codes it was not given.",
+            ),
         },
     },
     {
@@ -2866,23 +4006,44 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Add a reranking model to reorder the candidates by deeper relevance."),
-            ("b", "Pass only the top few reranked passages into the prompt."),
-            ("c", "Increase first-stage top-k to 200 to be thorough."),
-            ("d", "Lower the embedding dimension to speed things up."),
-            ("e", "Raise the model temperature during generation."),
+            (
+                "a",
+                "Add a reranking model that reorders the first-stage candidates by deeper relevance.",
+            ),
+            (
+                "b",
+                "Pass only the top few reranked passages into the prompt rather than the full candidate list.",
+            ),
+            (
+                "c",
+                "Increase the first-stage top-k all the way to 200 so the candidate pool is very thorough.",
+            ),
+            (
+                "d",
+                "Lower the embedding dimension so the first-stage retrieval step runs noticeably faster.",
+            ),
+            (
+                "e",
+                "Raise the model's sampling temperature during the final generation step for variety.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Reranking promotes the truly relevant passages, and passing only the top few keeps the prompt small while improving precision. Raising top-k adds noise, lowering embedding dimension harms retrieval quality, and temperature does not change ranking.",
         "rationales": {
-            "a": (True, "A reranker reorders candidates so the best passages rise to the top."),
+            "a": (
+                True,
+                "A reranker reorders candidates by deeper relevance so the best ones rise to the top.",
+            ),
             "b": (
                 True,
-                "Passing only the top few reranked passages improves precision and shrinks the prompt.",
+                "Passing only the top few reranked passages keeps the prompt focused and precise.",
             ),
-            "c": (False, "A larger top-k adds more candidates and more noise."),
-            "d": (False, "Reducing embedding dimension degrades retrieval quality."),
-            "e": (False, "Temperature affects generation, not candidate ranking."),
+            "c": (False, "A top-k of 200 adds noise and cost without improving final precision."),
+            "d": (
+                False,
+                "A smaller embedding dimension speeds retrieval but does not improve precision.",
+            ),
+            "e": (False, "Temperature affects generation randomness, not retrieval precision."),
         },
     },
     {
@@ -2895,19 +4056,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Smaller chunks improve precision but risk losing context; larger chunks preserve context but dilute relevance, so tune to the content.",
+                "Smaller chunks raise precision but risk losing context, while larger chunks dilute relevance, so tune to the content.",
             ),
-            ("b", "Chunk size has no effect on retrieval quality."),
-            ("c", "Always use the largest possible chunk for best results."),
-            ("d", "Always use one-token chunks for maximum precision."),
+            (
+                "b",
+                "Chunk size has no measurable effect on retrieval quality, so any value works equally well.",
+            ),
+            (
+                "c",
+                "Always use the largest possible chunk, since more text per chunk guarantees better results.",
+            ),
+            (
+                "d",
+                "Always use single-token chunks, since the smallest possible unit maximizes precision.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Chunk size is a precision-versus-context tradeoff that should be tuned to the content and query style. Claiming it has no effect is wrong, and the extremes of maximal or single-token chunks both perform poorly.",
         "rationales": {
-            "a": (True, "The tradeoff is precision versus context, tuned to the content."),
-            "b": (False, "Chunk size materially affects retrieval precision and context."),
-            "c": (False, "The largest chunk dilutes relevance and bloats context."),
-            "d": (False, "One-token chunks destroy context and meaning."),
+            "a": (
+                True,
+                "The tradeoff is real; chunk size should be tuned to the content, not fixed blindly.",
+            ),
+            "b": (
+                False,
+                "Chunk size clearly affects precision and context, so it is not irrelevant.",
+            ),
+            "c": (False, "Always-largest chunks dilute relevance and hurt retrieval precision."),
+            "d": (False, "Single-token chunks destroy the context needed to answer anything."),
         },
     },
     {
@@ -2918,26 +4094,44 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Improve retrieval so the needed evidence is actually in the context."),
+            (
+                "a",
+                "Improve retrieval so the evidence actually needed to answer is present in the context.",
+            ),
             (
                 "b",
-                "Instruct the model to answer only from the provided context and say so when it lacks support.",
+                "Instruct the model to answer only from the provided context and say so when support is missing.",
             ),
-            ("c", "Raise temperature to make answers more creative."),
-            ("d", "Remove citations so users cannot check the answer."),
-            ("e", "Increase max tokens so the model elaborates more."),
+            (
+                "c",
+                "Raise the sampling temperature so the model's answers come out more creative and varied.",
+            ),
+            (
+                "d",
+                "Remove the citations from answers so that users cannot check the claims against sources.",
+            ),
+            (
+                "e",
+                "Increase the max-tokens limit so the model elaborates at greater length on each answer.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Grounding instructions that forbid unsupported claims, plus better retrieval that actually supplies the needed evidence, both reduce fabrication. Higher temperature increases invention, removing citations hides errors, and more tokens encourage elaboration beyond the evidence.",
         "rationales": {
-            "a": (True, "If the right evidence is retrieved, the model has less need to invent."),
+            "a": (
+                True,
+                "Better retrieval puts the needed evidence in context so the model need not invent it.",
+            ),
             "b": (
                 True,
-                "Context-only instructions with an explicit 'insufficient evidence' option curb fabrication.",
+                "Grounding instructions keep the model from answering beyond the provided evidence.",
             ),
-            "c": (False, "Higher temperature increases creative fabrication."),
+            "c": (
+                False,
+                "Higher temperature increases, not decreases, the chance of invented content.",
+            ),
             "d": (False, "Removing citations hides hallucinations rather than reducing them."),
-            "e": (False, "More tokens invite elaboration beyond the supporting context."),
+            "e": (False, "More tokens let the model elaborate, which can add unsupported claims."),
         },
     },
     {
@@ -2948,24 +4142,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Embed the whole long question and retrieve once."),
-            ("b", "Decompose the query into sub-queries, retrieve for each, then synthesize."),
-            ("c", "Truncate the question to its first few words."),
-            ("d", "Raise temperature so the model fills in missing comparisons."),
+            (
+                "a",
+                "Embed the whole long multi-part question as one vector and retrieve a single time for it.",
+            ),
+            (
+                "b",
+                "Decompose the query into sub-queries, retrieve for each one, then synthesize the answer.",
+            ),
+            (
+                "c",
+                "Truncate the question down to just its first few words before running the retrieval step.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature so the model fills in the comparisons that were not retrieved.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Decomposing a compound question into focused sub-queries retrieves the right evidence for each part, which the model then synthesizes. A single embedding of the bundled question retrieves diffusely, truncation drops intent, and temperature cannot supply evidence that was never retrieved.",
         "rationales": {
             "a": (
                 False,
-                "One embedding of the compound question retrieves diffuse, mixed results.",
+                "A single embedding of a multi-hop question retrieves muddled, incomplete evidence.",
             ),
             "b": (
                 True,
-                "Sub-query decomposition retrieves targeted evidence for each part before synthesis.",
+                "Decomposing into sub-queries retrieves evidence for each hop, then synthesizes it.",
             ),
-            "c": (False, "Truncating the question discards essential intent."),
-            "d": (False, "Temperature cannot create comparison evidence that retrieval missed."),
+            "c": (
+                False,
+                "Truncating the question discards the parts that need their own retrieval.",
+            ),
+            "d": (False, "Temperature cannot supply evidence that retrieval never fetched."),
         },
     },
     {
@@ -2976,25 +4185,43 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Expand terse queries into richer equivalent phrasings before retrieval."),
-            ("b", "Add keyword matching so exact terms in the query still match."),
-            ("c", "Lower top-k so only exact matches return."),
-            ("d", "Delete verbose documents to match the terse queries."),
-            ("e", "Raise temperature on the generation step."),
+            (
+                "a",
+                "Expand each terse query into richer, equivalent phrasings before running retrieval.",
+            ),
+            (
+                "b",
+                "Add keyword matching so exact terms present in the query still match relevant passages.",
+            ),
+            (
+                "c",
+                "Lower the retrieval top-k so that only the very closest exact matches are returned.",
+            ),
+            (
+                "d",
+                "Delete the more verbose documents from the index so they match the terse queries better.",
+            ),
+            (
+                "e",
+                "Raise the sampling temperature on the final generation step to broaden the answers.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Query expansion and keyword matching both widen what retrieval can match for terse input, improving recall without touching the index. Lowering top-k reduces recall, deleting documents loses content, and temperature affects generation not recall.",
         "rationales": {
             "a": (
                 True,
-                "Expanding terse queries into fuller phrasings improves recall at retrieval time.",
+                "Query expansion gives terse queries more surface area to match relevant passages.",
             ),
-            "b": (
-                True,
-                "Keyword matching catches exact terms the terse query shares with documents.",
+            "b": (True, "Keyword matching catches exact terms that pure vector search might miss."),
+            "c": (
+                False,
+                "A lower top-k narrows results and reduces recall rather than improving it.",
             ),
-            "c": (False, "A smaller top-k reduces recall, the opposite of the goal."),
-            "d": (False, "Deleting verbose documents discards content users need."),
+            "d": (
+                False,
+                "Deleting verbose documents discards useful content and still hurts recall.",
+            ),
             "e": (False, "Temperature affects generation, not retrieval recall."),
         },
     },
@@ -3006,18 +4233,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Keep top-k at 30 and switch to a bigger model."),
-            ("b", "Raise top-k further to 60 for even more coverage."),
-            ("c", "Keep top-k at 30 and raise temperature."),
-            ("d", "Lower top-k to the small number that actually carries the relevant signal."),
+            (
+                "a",
+                "Keep the top-k at 30 and switch to a bigger generation model to cope with the noisy context.",
+            ),
+            (
+                "b",
+                "Raise the top-k further to 60 so the prompt has even broader coverage of the corpus.",
+            ),
+            (
+                "c",
+                "Keep the top-k at 30 and raise the sampling temperature so the model handles the noise.",
+            ),
+            (
+                "d",
+                "Lower the top-k to the small number of passages that actually carry the relevant signal.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "When relevant content is in the top few passages, lowering top-k removes distracting noise and cuts cost while preserving signal. Raising top-k adds more noise and cost, and temperature or a bigger model does not fix the noisy-context problem a high top-k created.",
         "rationales": {
-            "a": (False, "A bigger model still has to fight the noisy oversized context."),
-            "b": (False, "A larger top-k adds more irrelevant passages and more cost."),
-            "c": (False, "Temperature does not remove the noise introduced by too many passages."),
-            "d": (True, "A smaller top-k keeps the signal while cutting noise and cost."),
+            "a": (
+                False,
+                "A bigger model still has to wade through the same noisy, oversized context.",
+            ),
+            "b": (False, "Raising top-k to 60 adds even more irrelevant passages and noise."),
+            "c": (
+                False,
+                "Higher temperature does not remove the irrelevant passages crowding the prompt.",
+            ),
+            "d": (
+                True,
+                "Lowering top-k to the relevant few removes the noise diluting the answer.",
+            ),
         },
     },
     {
@@ -3030,22 +4278,31 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Hierarchical (parent-child) chunking that matches child chunks but returns the parent section.",
+                "Hierarchical parent-child chunking that matches small child chunks but returns the parent section.",
             ),
-            ("b", "A single flat chunk size for everything."),
-            ("c", "One chunk per entire document."),
-            ("d", "Random chunk boundaries to add variety."),
+            (
+                "b",
+                "A single flat chunk size applied uniformly to every document regardless of its structure.",
+            ),
+            (
+                "c",
+                "One chunk spanning each entire document so retrieval always returns the whole file.",
+            ),
+            (
+                "d",
+                "Randomly placed chunk boundaries added across documents to introduce more variety.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Hierarchical parent-child chunking matches on small child chunks for precision but returns the enclosing parent for context, exactly the stated need. A single flat size cannot do both, one-chunk-per-document loses precision, and random boundaries are incoherent.",
         "rationales": {
             "a": (
                 True,
-                "Parent-child chunking matches small units yet returns the broader parent context.",
+                "Parent-child chunking matches precise child chunks yet returns the fuller parent context.",
             ),
-            "b": (False, "A flat chunk size cannot both match small and return large context."),
-            "c": (False, "One chunk per document sacrifices matching precision."),
-            "d": (False, "Random boundaries produce incoherent, unreliable chunks."),
+            "b": (False, "A single flat size cannot be both precise and context-rich at once."),
+            "c": (False, "Whole-document chunks return far too much and lose precision."),
+            "d": (False, "Random boundaries produce incoherent chunks and hurt retrieval."),
         },
     },
     {
@@ -3056,24 +4313,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Always generate an answer regardless of retrieval quality."),
+            (
+                "a",
+                "Always generate an answer no matter how poor, sparse, or irrelevant the retrieved context turns out to be.",
+            ),
             (
                 "b",
-                "Gate generation on a relevance threshold and instruct the model to say it cannot answer when evidence is insufficient.",
+                "Gate generation on a relevance threshold and have the model decline when evidence is insufficient.",
             ),
-            ("c", "Raise temperature so answers sound more confident."),
-            ("d", "Hide the fact that retrieval returned nothing."),
+            (
+                "c",
+                "Raise the sampling temperature so the model's answers at least come across as more confident.",
+            ),
+            (
+                "d",
+                "Hide from the user the fact that retrieval returned no relevant passages for the question.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Gating on a relevance threshold and instructing the model to decline when evidence is weak produces graceful 'I don't know' behavior instead of fabrication. Always generating, raising confidence, or hiding empty retrieval all make the problem worse.",
         "rationales": {
-            "a": (False, "Always answering is exactly what causes the fabrication."),
-            "b": (
-                True,
-                "A relevance gate plus a decline instruction prevents answering without evidence.",
+            "a": (False, "Always answering invites confident hallucination when retrieval fails."),
+            "b": (True, "A relevance gate plus a decline instruction prevents ungrounded answers."),
+            "c": (
+                False,
+                "Confident phrasing from higher temperature masks, not fixes, missing evidence.",
             ),
-            "c": (False, "Higher temperature makes confident fabrication more likely."),
-            "d": (False, "Hiding empty retrieval conceals the problem instead of handling it."),
+            "d": (False, "Hiding the empty retrieval misleads the user rather than handling it."),
         },
     },
     {
@@ -3084,24 +4350,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Dimension has no effect on storage or quality."),
-            ("b", "Larger dimensions always reduce cost."),
+            (
+                "a",
+                "The chosen embedding dimension has no effect on either storage cost or retrieval quality.",
+            ),
+            (
+                "b",
+                "Larger embedding dimensions always reduce overall storage and query cost in the index.",
+            ),
             (
                 "c",
-                "Larger dimensions can capture more nuance but increase storage and query cost, so pick the smallest that meets quality.",
+                "Larger dimensions capture more nuance but cost more, so pick the smallest that meets quality.",
             ),
-            ("d", "Smaller dimensions always give higher quality."),
+            (
+                "d",
+                "Smaller embedding dimensions always deliver higher retrieval quality than larger ones.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Higher-dimensional embeddings can represent more nuance but cost more to store and query, so the goal is the smallest dimension that still meets quality. Claiming larger dimensions reduce cost, that dimension has no effect, or that smaller is always better are all incorrect.",
         "rationales": {
-            "a": (False, "Dimension clearly affects both storage and representational quality."),
-            "b": (False, "Larger dimensions increase, not reduce, storage and query cost."),
+            "a": (False, "Dimension clearly affects both storage footprint and quality."),
+            "b": (False, "Larger dimensions raise storage and query cost, not lower it."),
             "c": (
                 True,
-                "Dimension trades representational capacity against storage and query cost.",
+                "Pick the smallest dimension that meets quality to balance nuance against cost.",
             ),
-            "d": (False, "Smaller is not universally better; it can lose nuance."),
+            "d": (
+                False,
+                "Smaller dimensions can lose nuance, so they are not always higher quality.",
+            ),
         },
     },
     {
@@ -3112,21 +4390,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so the model writes more confidently."),
-            ("b", "Return only the final answer with no sources."),
-            ("c", "Attach a random document link to every answer."),
+            (
+                "a",
+                "Raise the sampling temperature so the model writes its answers with more apparent confidence.",
+            ),
+            (
+                "b",
+                "Return only the final generated answer to the user with no accompanying source references.",
+            ),
+            (
+                "c",
+                "Attach a randomly chosen document link to every answer so a citation always appears present.",
+            ),
             (
                 "d",
-                "Pass source identifiers with each passage and prompt the model to cite the supporting source per claim.",
+                "Pass source identifiers with each passage and prompt the model to cite the source per claim.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Passing source IDs alongside each passage and instructing the model to cite the supporting source per claim yields verifiable attribution. Omitting sources prevents verification, random links are misleading, and temperature does not create real citations.",
         "rationales": {
-            "a": (False, "Confidence from temperature is not evidence or attribution."),
-            "b": (False, "No sources means users cannot verify anything."),
-            "c": (False, "Random links are misleading and not real attribution."),
-            "d": (True, "Source IDs per passage plus per-claim citation make answers verifiable."),
+            "a": (False, "Confident phrasing does not provide a verifiable source for each claim."),
+            "b": (False, "Returning only the answer gives users no way to verify it."),
+            "c": (False, "A random link is a fake citation that misleads users."),
+            "d": (
+                True,
+                "Passing source IDs and prompting per-claim citation produces trustworthy attribution.",
+            ),
         },
     },
     {
@@ -3137,20 +4427,26 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Sparse keyword matching such as BM25."),
-            ("b", "Dense vector (semantic) similarity."),
-            ("c", "The model's sampling temperature."),
-            ("d", "The UI's dark-mode toggle."),
-            ("e", "The size of the application log file."),
+            (
+                "a",
+                "Sparse keyword matching such as the BM25 ranking function over the document text.",
+            ),
+            ("b", "Dense vector similarity that captures the semantic meaning of each passage."),
+            ("c", "The sampling temperature the generation model happens to use for each answer."),
+            ("d", "The dark-mode toggle setting in the application's user-facing interface."),
+            ("e", "The current size on disk of the application's rotating log file in megabytes."),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Hybrid search fuses dense vector similarity with sparse keyword matching like BM25 to capture both semantics and exact terms. Temperature, UI theme, and log size are unrelated to retrieval.",
         "rationales": {
-            "a": (True, "Sparse BM25 keyword matching captures exact terms."),
-            "b": (True, "Dense vector similarity provides semantic matching."),
-            "c": (False, "Temperature is a generation parameter, not a retrieval signal."),
-            "d": (False, "UI theme has nothing to do with retrieval."),
-            "e": (False, "Log file size is irrelevant to search."),
+            "a": (True, "BM25 sparse keyword matching is one half of hybrid search."),
+            "b": (True, "Dense vector similarity is the semantic half of hybrid search."),
+            "c": (
+                False,
+                "Sampling temperature is a generation setting, not a retrieval component.",
+            ),
+            "d": (False, "A UI theme toggle has nothing to do with search."),
+            "e": (False, "Log file size is unrelated to how search works."),
         },
     },
     {
@@ -3163,19 +4459,31 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Rerank a smaller candidate set (for example top 20 instead of top 100) to cut cost while keeping most of the gain.",
+                "Rerank a smaller candidate set, say the top 20 instead of top 100, to cut cost while keeping most gains.",
             ),
-            ("b", "Remove the reranker entirely and accept the quality drop."),
-            ("c", "Rerank the entire index on every query."),
-            ("d", "Rerank twice per query for extra confidence."),
+            (
+                "b",
+                "Remove the reranker from the pipeline entirely and simply accept the resulting drop in quality.",
+            ),
+            (
+                "c",
+                "Rerank the entire index on every query so that no potentially relevant document is left out.",
+            ),
+            (
+                "d",
+                "Run the reranker twice on each query and average the scores for a little extra confidence.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Reranking a smaller candidate set keeps most of the precision gain while cutting the per-request cost and latency. Removing the reranker loses the benefit, reranking the whole index is infeasible, and reranking twice doubles the overhead.",
         "rationales": {
-            "a": (True, "A smaller rerank candidate set preserves most quality at lower overhead."),
-            "b": (False, "Dropping the reranker forfeits the precision improvement."),
-            "c": (False, "Reranking the entire index per query is prohibitively expensive."),
-            "d": (False, "Reranking twice adds cost without a matching benefit."),
+            "a": (
+                True,
+                "Reranking a smaller candidate set keeps most of the gain at much lower cost.",
+            ),
+            "b": (False, "Dropping the reranker sacrifices the quality it was added to provide."),
+            "c": (False, "Reranking the whole index per query is prohibitively expensive."),
+            "d": (False, "Reranking twice doubles cost for negligible benefit."),
         },
     },
     {
@@ -3186,24 +4494,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Shrink the chunk further to a single sentence."),
+            (
+                "a",
+                "Shrink each chunk further down to a single sentence so it carries less ambiguous content.",
+            ),
             (
                 "b",
-                "Prepend a short contextual summary (document/section context) to each chunk before embedding.",
+                "Prepend a short document- or section-level context summary to each chunk before embedding it.",
             ),
-            ("c", "Raise temperature so the model infers the missing referents."),
-            ("d", "Remove the ambiguous chunks from the index."),
+            (
+                "c",
+                "Raise the sampling temperature so the model can infer the referents missing from the chunk.",
+            ),
+            (
+                "d",
+                "Remove the ambiguous chunks from the index so they can never be retrieved for a query.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Prepending a brief contextual summary gives each chunk enough standalone meaning to be retrieved for the right queries. Shrinking chunks worsens ambiguity, temperature cannot fix retrieval of context-free chunks, and removing them loses content.",
         "rationales": {
-            "a": (False, "A smaller chunk makes the referent ambiguity worse."),
+            "a": (
+                False,
+                "Shrinking chunks further removes even more of the context needed to disambiguate them.",
+            ),
             "b": (
                 True,
-                "Adding document/section context makes ambiguous chunks self-contained for retrieval.",
+                "Prepending section context makes each chunk self-explanatory and more retrievable.",
             ),
-            "c": (False, "Temperature affects generation, not whether the chunk is retrieved."),
-            "d": (False, "Removing the chunks discards legitimate content."),
+            "c": (
+                False,
+                "Temperature cannot recover referents that are absent from the chunk text.",
+            ),
+            "d": (False, "Deleting ambiguous chunks discards content users may need."),
         },
     },
     {
@@ -3214,24 +4537,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "UI click-through rate and font size."),
-            ("b", "GPU temperature and disk IOPS."),
+            (
+                "a",
+                "The user interface's click-through rate and the font size used to display the answers.",
+            ),
+            (
+                "b",
+                "The serving GPU's operating temperature and the provisioned disk IOPS of the backing storage volume.",
+            ),
             (
                 "c",
-                "Retrieval relevance and answer faithfulness/groundedness to the retrieved context.",
+                "Retrieval relevance and the answer's faithfulness or groundedness to the retrieved context.",
             ),
-            ("d", "Only the final answer's word count."),
+            (
+                "d",
+                "Only the final answer's total word count, measured across every response the system gives.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "RAG is evaluated on whether retrieval surfaces relevant evidence and whether the answer stays faithful to that evidence. Hardware metrics, UI metrics, and word count do not measure RAG quality.",
         "rationales": {
-            "a": (False, "Click-through and font size do not measure retrieval or grounding."),
-            "b": (False, "GPU temperature and IOPS are infrastructure metrics, not RAG quality."),
+            "a": (False, "Click-through and font size do not measure retrieval or answer quality."),
+            "b": (
+                False,
+                "GPU temperature and disk IOPS are infrastructure metrics, not RAG quality.",
+            ),
             "c": (
                 True,
-                "Retrieval relevance plus answer faithfulness directly measure RAG quality.",
+                "Retrieval relevance and answer faithfulness are the core RAG quality metrics.",
             ),
-            "d": (False, "Word count says nothing about correctness or grounding."),
+            "d": (
+                False,
+                "Word count says nothing about whether the answer is correct or grounded.",
+            ),
         },
     },
     {
@@ -3242,23 +4580,35 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Lower the embedding dimension."),
-            ("b", "Increase top-k so the duplicates are joined by more duplicates."),
-            ("c", "Raise temperature during generation."),
+            (
+                "a",
+                "Lower the embedding dimension so the near-duplicate passages stop matching so strongly.",
+            ),
+            (
+                "b",
+                "Increase the retrieval top-k so the duplicates are simply joined by yet more duplicates.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature during generation so the answer reads as more varied.",
+            ),
             (
                 "d",
-                "Apply maximal marginal relevance (MMR) to balance relevance with diversity among results.",
+                "Apply maximal marginal relevance to balance relevance against diversity among the results.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Maximal marginal relevance selects results that are relevant yet diverse, reducing near-duplicate crowding so complementary context surfaces. Raising top-k adds more of the same, temperature affects generation, and lowering embedding dimension harms quality.",
         "rationales": {
-            "a": (False, "Reducing embedding dimension degrades retrieval quality."),
-            "b": (False, "More top-k tends to add still more near-duplicates."),
-            "c": (False, "Temperature changes generation, not retrieval diversity."),
+            "a": (
+                False,
+                "A smaller dimension does not stop genuinely redundant passages from matching.",
+            ),
+            "b": (False, "Higher top-k returns more results, including more duplicates."),
+            "c": (False, "Temperature varies the prose but not the redundant retrieved passages."),
             "d": (
                 True,
-                "MMR trades a little relevance for diversity, surfacing complementary passages.",
+                "MMR trades a little relevance for diversity, removing the redundant results.",
             ),
         },
     },
@@ -3272,25 +4622,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Treat retrieved content as untrusted data, delimit it clearly, and instruct the model not to follow instructions found inside it.",
+                "Treat retrieved content as untrusted data, delimit it clearly, and tell the model not to obey instructions inside it.",
             ),
-            ("b", "Trust retrieved content fully since it came from the corpus."),
-            ("c", "Raise temperature so the model is less literal."),
-            ("d", "Increase top-k to dilute the malicious passage."),
+            (
+                "b",
+                "Trust the retrieved content fully, since it was drawn from your own curated document corpus.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature so the model reads the injected instructions less literally.",
+            ),
+            (
+                "d",
+                "Increase the retrieval top-k so the single malicious passage is diluted among many others.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Delimiting retrieved content as untrusted data and instructing the model to ignore embedded instructions reduces injection via retrieved documents. Trusting the corpus is the vulnerability, temperature does not address injection, and more passages do not neutralize an adversarial instruction.",
         "rationales": {
             "a": (
                 True,
-                "Delimiting untrusted content and refusing embedded instructions mitigates injection.",
+                "Delimiting retrieved text as untrusted data and ignoring embedded instructions blocks injection.",
             ),
-            "b": (False, "Fully trusting retrieved content is exactly the vulnerability."),
+            "b": (False, "Even corpus content can be poisoned, so blanket trust is unsafe."),
             "c": (
                 False,
                 "Temperature does not stop the model from following injected instructions.",
             ),
-            "d": (False, "Diluting with more passages does not disarm the malicious instruction."),
+            "d": (False, "More passages do not neutralize a malicious instruction in the context."),
         },
     },
     {
@@ -3301,24 +4660,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Sort purely by date and ignore similarity."),
+            (
+                "a",
+                "Sort results purely by publish date and ignore the similarity scores from retrieval entirely.",
+            ),
             (
                 "b",
-                "Combine similarity with a recency signal (filter or boost) using the publish-date metadata.",
+                "Combine similarity with a recency signal, filtering or boosting using the publish-date metadata.",
             ),
-            ("c", "Delete all older articles permanently."),
-            ("d", "Raise temperature so the model prefers new facts."),
+            (
+                "c",
+                "Delete all of the older articles from the index permanently so that only the most recent ones can ever be returned.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature so the model is nudged to prefer the newer facts in its answer.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Combining similarity with a recency filter or boost on the publish-date metadata favors fresh content while preserving relevance. Sorting purely by date drops relevance, deleting older articles loses history, and temperature does not influence retrieval ranking.",
         "rationales": {
-            "a": (False, "Pure date sorting ignores relevance and returns off-topic recent items."),
+            "a": (
+                False,
+                "Sorting by date alone throws away the relevance signal retrieval provides.",
+            ),
             "b": (
                 True,
-                "Blending similarity with a recency signal favors fresh yet relevant results.",
+                "Blending similarity with a recency boost favors fresh and relevant results together.",
             ),
-            "c": (False, "Deleting older articles permanently loses legitimate archive content."),
-            "d": (False, "Temperature does not change which passages are retrieved."),
+            "c": (False, "Deleting older articles loses content that may still be needed."),
+            "d": (False, "Temperature cannot make the model prefer recent sources reliably."),
         },
     },
     {
@@ -3329,24 +4700,30 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Pass the handbook twice per request for redundancy."),
-            ("b", "Pass the full handbook every request using the largest context window."),
-            ("c", "Retrieve only the relevant sections per query to keep input tokens low."),
-            ("d", "Fine-tune on the handbook and never retrieve."),
+            (
+                "a",
+                "Pass the full handbook into the prompt twice on each request for redundancy against misses.",
+            ),
+            (
+                "b",
+                "Pass the entire handbook on every request using a model with the largest context window.",
+            ),
+            (
+                "c",
+                "Retrieve only the sections relevant to each query so the input token count stays low.",
+            ),
+            (
+                "d",
+                "Fine-tune the model on the handbook once and stop retrieving from it altogether thereafter.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Retrieving only the relevant sections keeps input tokens and cost low on frequent requests where most of the handbook is irrelevant each time. Passing the full handbook every time (let alone twice) is expensive, and fine-tuning cannot cite sources or handle updates well.",
         "rationales": {
-            "a": (False, "Sending the handbook twice doubles an already wasteful cost."),
-            "b": (
-                False,
-                "Full-handbook context on every request is costly when most is irrelevant.",
-            ),
-            "c": (
-                True,
-                "Per-query retrieval sends only relevant tokens, minimizing cost at high frequency.",
-            ),
-            "d": (False, "Fine-tuning loses citations and update agility this scenario values."),
+            "a": (False, "Passing the handbook twice doubles the already-wasteful token cost."),
+            "b": (False, "Sending the whole handbook every request is cost-prohibitive at scale."),
+            "c": (True, "Retrieving only relevant sections keeps input tokens and cost low."),
+            "d": (False, "Fine-tuning loses citations and cannot track handbook updates."),
         },
     },
     {
@@ -3357,23 +4734,35 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Apply query expansion to broaden terse queries."),
-            ("b", "Add hybrid keyword matching so exact-term passages are not missed."),
-            ("c", "Lower top-k to one result."),
-            ("d", "Raise the model temperature."),
-            ("e", "Remove metadata so nothing is filtered."),
+            (
+                "a",
+                "Apply query expansion to broaden terse queries into richer equivalent phrasings.",
+            ),
+            (
+                "b",
+                "Add hybrid keyword matching so exact-term passages are not missed by vector search.",
+            ),
+            ("c", "Lower the retrieval top-k down to a single result returned per query."),
+            (
+                "d",
+                "Raise the model's sampling temperature during the generation step of the pipeline.",
+            ),
+            (
+                "e",
+                "Remove the metadata from documents so that nothing is ever filtered out at query time.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Hybrid keyword matching and query expansion both widen what retrieval can match, improving recall of passages that exist. Lowering top-k reduces recall, temperature is unrelated, and removing metadata is not a general recall improvement and can harm precision.",
         "rationales": {
-            "a": (True, "Query expansion broadens terse queries to match more relevant text."),
-            "b": (True, "Hybrid keyword matching catches exact-term passages semantics may miss."),
-            "c": (False, "Top-k of one lowers recall substantially."),
-            "d": (False, "Temperature affects generation, not retrieval recall."),
-            "e": (
-                False,
-                "Removing metadata does not reliably improve recall and can hurt precision.",
+            "a": (
+                True,
+                "Query expansion gives terse queries more ways to match relevant passages.",
             ),
+            "b": (True, "Hybrid keyword matching catches exact terms vector search can miss."),
+            "c": (False, "A top-k of one minimizes recall rather than improving it."),
+            "d": (False, "Temperature affects generation, not retrieval recall."),
+            "e": (False, "Removing metadata removes useful filtering without improving recall."),
         },
     },
     {
@@ -3384,23 +4773,32 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Hide both sources and state a single number confidently."),
-            ("b", "Always pick the first retrieved passage."),
-            ("c", "Average the conflicting numbers automatically."),
+            (
+                "a",
+                "Hide both conflicting sources and state a single number to the user with full confidence.",
+            ),
+            (
+                "b",
+                "Always take the first retrieved passage's value and silently ignore the conflicting one.",
+            ),
+            (
+                "c",
+                "Automatically average the two conflicting numbers and present the midpoint as the answer.",
+            ),
             (
                 "d",
-                "Instruct the model to surface the conflict and cite each source rather than silently choosing one.",
+                "Instruct the model to surface the conflict and cite each source rather than silently picking one.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Having the model surface the conflict and cite each source lets the user judge, which is the transparent handling the team wants. Picking the first passage, averaging unrelated figures, or hiding the conflict all mislead the user.",
         "rationales": {
-            "a": (False, "Hiding the conflict and asserting one number misleads the user."),
-            "b": (False, "Picking the first passage is arbitrary and often wrong."),
-            "c": (False, "Averaging conflicting figures can produce a meaningless number."),
+            "a": (False, "Stating one number confidently hides a real conflict from the user."),
+            "b": (False, "Taking the first passage ignores a legitimately conflicting source."),
+            "c": (False, "Averaging conflicting figures invents a number neither source supports."),
             "d": (
                 True,
-                "Surfacing and citing conflicting sources is transparent and lets the user decide.",
+                "Surfacing the conflict with citations lets the user judge the discrepancy.",
             ),
         },
     },
@@ -3414,25 +4812,31 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Batch-embed the backlog offline and embed each query in real time at request time.",
+                "Batch-embed the backlog offline and embed each incoming query in real time at request time.",
             ),
-            ("b", "Real-time embed all five million passages one by one."),
-            ("c", "Batch-embed user queries once per day."),
-            ("d", "Skip embedding queries and compare raw text to vectors."),
+            (
+                "b",
+                "Embed all five million backlog passages one at a time through the real-time path.",
+            ),
+            (
+                "c",
+                "Batch-embed the user queries once per day so they can be processed together in bulk.",
+            ),
+            (
+                "d",
+                "Skip embedding the queries entirely and compare the raw query text against the vectors.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Batch embedding fits the offline backlog cheaply, while real-time embedding fits the latency-sensitive query path. Real-time embedding the whole backlog is costly, daily-batching queries breaks interactivity, and comparing raw text to vectors is not a valid similarity operation.",
         "rationales": {
             "a": (
                 True,
-                "Batch for the offline backlog and real-time for queries matches each need.",
+                "Batch for the backlog and real time for queries matches each to its latency need.",
             ),
-            "b": (
-                False,
-                "Real-time embedding five million passages is needlessly costly for a backlog.",
-            ),
-            "c": (False, "Daily batching of queries destroys interactive latency."),
-            "d": (False, "You cannot compare raw text directly to embedding vectors."),
+            "b": (False, "Real-time embedding of five million passages is slow and wasteful."),
+            "c": (False, "Daily batch embedding of queries makes interactive search impossible."),
+            "d": (False, "Raw text cannot be compared against embedding vectors directly."),
         },
     },
     {
@@ -3443,26 +4847,35 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Shuffle passages randomly on each request."),
+            (
+                "a",
+                "Shuffle the retrieved passages into a random order on each and every request to the model.",
+            ),
             (
                 "b",
                 "Order passages so the highest-ranked evidence is placed prominently rather than buried mid-context.",
             ),
-            ("c", "Raise temperature so the model reads more carefully."),
-            ("d", "Duplicate every passage to increase its weight."),
+            (
+                "c",
+                "Raise the sampling temperature so the model is pushed to read the whole context more carefully.",
+            ),
+            (
+                "d",
+                "Duplicate every retrieved passage in the prompt so each one carries extra weight in the answer.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Placing the highest-ranked evidence prominently rather than buried mid-context mitigates the lost-in-the-middle effect and helps the model attend to it. Random shuffling is inconsistent, temperature does not improve attention, and duplicating passages wastes tokens and can confuse the model.",
         "rationales": {
-            "a": (False, "Random order makes attention to key evidence unpredictable."),
-            "b": (
-                True,
-                "Prominent ordering of top evidence counters the lost-in-the-middle effect.",
+            "a": (
+                False,
+                "Random ordering can bury the best evidence where the model attends least.",
             ),
-            "c": (False, "Temperature does not make the model attend to buried content."),
+            "b": (True, "Placing top-ranked evidence prominently helps the model use it."),
+            "c": (False, "Temperature does not change how the model attends across the context."),
             "d": (
                 False,
-                "Duplicating passages wastes tokens without reliably improving attention.",
+                "Duplicating passages wastes tokens and does not reliably raise their weight.",
             ),
         },
     },
@@ -3474,20 +4887,35 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Versioned prompts that can be promoted deliberately to production."),
-            ("b", "The ability to roll back to a prior known-good prompt version."),
-            ("c", "Pasting prompts into a shared chat channel for visibility."),
-            ("d", "Storing prompts only in each developer's local notes."),
-            ("e", "Raising temperature whenever a prompt is edited."),
+            (
+                "a",
+                "Versioned prompts in Prompt Management that can be promoted deliberately to production.",
+            ),
+            (
+                "b",
+                "The ability to roll back instantly to a prior known-good prompt version when one regresses.",
+            ),
+            (
+                "c",
+                "Pasting each prompt into a shared team chat channel so everyone can see the current wording.",
+            ),
+            (
+                "d",
+                "Storing the prompts only in each individual developer's private local notes on their machine.",
+            ),
+            (
+                "e",
+                "Raising the sampling temperature automatically every time a prompt is edited and saved.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Managed prompt versioning provides deliberate promotion and rollback to a known-good version, which is exactly what the team lacks. Chat channels, local notes, and temperature changes offer no versioning or recovery.",
         "rationales": {
-            "a": (True, "Versioned prompts enable deliberate, auditable promotion to production."),
-            "b": (True, "Rollback to a known-good version restores quality after a bad change."),
-            "c": (False, "A chat channel is not a versioned, recoverable prompt store."),
-            "d": (False, "Local notes are not shared, versioned, or recoverable."),
-            "e": (False, "Changing temperature on edit is unrelated to versioning or rollback."),
+            "a": (True, "Versioned prompts support deliberate promotion to production."),
+            "b": (True, "Rollback to a known-good version is a key governance capability."),
+            "c": (False, "A chat channel is not version control and loses history."),
+            "d": (False, "Local developer notes are neither shared nor versioned."),
+            "e": (False, "Temperature changes are unrelated to prompt versioning."),
         },
     },
     {
@@ -3498,18 +4926,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "A cron job that re-runs one prompt repeatedly."),
-            ("b", "A single giant prompt that tries to do all steps at once."),
-            ("c", "Manual copy-paste between separate console sessions."),
-            ("d", "Amazon Bedrock Prompt Flows to define and version the multi-step workflow."),
+            (
+                "a",
+                "A cron job that re-runs one single prompt repeatedly on a fixed schedule each hour.",
+            ),
+            (
+                "b",
+                "One giant prompt that tries to perform all of the workflow's steps at once in a single call.",
+            ),
+            (
+                "c",
+                "Manual copy-and-paste of intermediate output between separate console sessions by hand.",
+            ),
+            (
+                "d",
+                "Amazon Bedrock Prompt Flows to define, connect, and version the multi-step workflow.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Bedrock Prompt Flows provides a managed, versionable way to orchestrate multi-step, branching generative workflows. A single mega-prompt is brittle, manual copy-paste does not scale or version, and a cron job does not orchestrate branching logic.",
         "rationales": {
-            "a": (False, "A cron job repeats one prompt and does not branch between steps."),
-            "b": (False, "One giant prompt is brittle and hard to maintain for multi-step logic."),
-            "c": (False, "Manual copy-paste is not orchestration and cannot be versioned."),
-            "d": (True, "Prompt Flows orchestrates and versions multi-step branching workflows."),
+            "a": (
+                False,
+                "A cron job repeating one prompt does not orchestrate a multi-step workflow.",
+            ),
+            "b": (
+                False,
+                "One giant prompt is brittle and hard to debug compared to defined steps.",
+            ),
+            "c": (False, "Manual copy-paste between sessions is error-prone and not reproducible."),
+            "d": (True, "Prompt Flows defines and versions the connected multi-step workflow."),
         },
     },
     {
@@ -3522,22 +4968,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Specify the JSON schema in the prompt, request JSON-only output, and validate/repair against the schema before use.",
+                "Specify the JSON schema in the prompt, request JSON-only output, and validate or repair it before use.",
             ),
-            ("b", "Ask for 'nice formatting' and hope it is valid JSON."),
-            ("c", "Raise temperature so the model is more creative with structure."),
-            ("d", "Accept whatever the model returns and parse leniently."),
+            (
+                "b",
+                "Ask the model for nicely formatted output and simply hope that it turns out to be valid JSON.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature so the model is freer to be creative with the output structure.",
+            ),
+            (
+                "d",
+                "Accept whatever text the model returns and parse it leniently, ignoring malformed responses.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Specifying the schema, requesting JSON-only output, and validating or repairing against the schema reliably enforces the contract. Vague formatting requests, higher temperature, and lenient parsing all leave malformed output to break the downstream service.",
         "rationales": {
             "a": (
                 True,
-                "Schema in the prompt plus validation enforces a reliable structured contract.",
+                "Schema in the prompt plus validation and repair makes structured output reliable.",
             ),
-            "b": (False, "Hoping for valid JSON from a vague request is unreliable."),
-            "c": (False, "Higher temperature increases structural variation and errors."),
-            "d": (False, "Lenient parsing silently accepts malformed data downstream."),
+            "b": (False, "Hoping for valid JSON leaves the parser to fail on malformed output."),
+            "c": (False, "Higher temperature makes the structure vary more, not less."),
+            "d": (
+                False,
+                "Lenient parsing silently accepts broken output and corrupts downstream data.",
+            ),
         },
     },
     {
@@ -3548,20 +5006,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Prompt the model to reason step by step before the final answer."),
-            ("b", "Provide a worked example that demonstrates the reasoning process."),
-            ("c", "Demand only the final number with no reasoning."),
-            ("d", "Raise temperature to encourage leaps of insight."),
-            ("e", "Shorten the prompt to a single word."),
+            (
+                "a",
+                "Prompt the model to reason through the problem step by step before giving its final answer.",
+            ),
+            (
+                "b",
+                "Provide a worked example in the prompt that demonstrates the full reasoning process.",
+            ),
+            (
+                "c",
+                "Demand only the final number as output with no intermediate reasoning allowed at all.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature to encourage the model to make sudden leaps of insight.",
+            ),
+            (
+                "e",
+                "Shorten the entire prompt down to a single word so the model stays maximally concise.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Asking for step-by-step reasoning and showing a worked example both help the model perform multi-step reasoning accurately. Forcing a final-answer-only response removes reasoning room, higher temperature adds randomness, and a one-word prompt lacks context.",
         "rationales": {
-            "a": (True, "Step-by-step reasoning helps the model work through multi-step problems."),
+            "a": (True, "Step-by-step reasoning improves accuracy on multi-step problems."),
             "b": (True, "A worked example demonstrates the reasoning pattern to follow."),
-            "c": (False, "Final-answer-only removes the intermediate reasoning the task needs."),
-            "d": (False, "Higher temperature adds randomness, not reliable reasoning."),
-            "e": (False, "A one-word prompt lacks the context to solve the task."),
+            "c": (
+                False,
+                "Demanding only the final number removes the reasoning that helps accuracy.",
+            ),
+            "d": (False, "Temperature-driven leaps add randomness, not reliable reasoning."),
+            "e": (False, "A one-word prompt gives the model nothing to reason about."),
         },
     },
     {
@@ -3572,23 +5048,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Gate promotion on passing an evaluation against a quality baseline."),
-            ("b", "Version prompts and require review/approval before promotion to production."),
-            ("c", "Let any developer edit the live prompt directly without review."),
-            ("d", "Store prompts only in ephemeral chat messages."),
-            ("e", "Raise temperature whenever a prompt changes."),
+            (
+                "a",
+                "Gate each promotion on passing an evaluation against an established quality baseline.",
+            ),
+            (
+                "b",
+                "Version the prompts and require review and approval before any promotion to production.",
+            ),
+            (
+                "c",
+                "Let any developer edit the live production prompt directly with no review step at all.",
+            ),
+            (
+                "d",
+                "Store the prompts only in ephemeral chat messages that are not versioned anywhere.",
+            ),
+            (
+                "e",
+                "Raise the sampling temperature automatically whenever any prompt is changed and saved.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Versioning with review and gating promotion on an evaluation baseline make prompt changes auditable and safe. Unreviewed live edits, ephemeral storage, and arbitrary temperature changes undermine governance.",
         "rationales": {
-            "a": (True, "An evaluation gate prevents promoting prompts that regress quality."),
-            "b": (
+            "a": (
                 True,
-                "Versioning plus review and approval makes changes auditable and reversible.",
+                "An evaluation gate against a baseline blocks regressions before promotion.",
             ),
-            "c": (False, "Unreviewed live edits remove the governance control entirely."),
-            "d": (False, "Ephemeral chat storage is not an auditable prompt record."),
-            "e": (False, "Changing temperature on every edit is not a governance control."),
+            "b": (True, "Versioning plus review and approval controls what reaches production."),
+            "c": (False, "Direct unreviewed edits to the live prompt invite uncontrolled change."),
+            "d": (False, "Ephemeral chat storage loses history and prevents rollback."),
+            "e": (False, "Temperature changes have nothing to do with prompt governance."),
         },
     },
     {
@@ -3599,24 +5090,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so manipulations have less effect."),
-            ("b", "Concatenate user input into the instruction and trust users."),
+            (
+                "a",
+                "Raise the sampling temperature so that user manipulation attempts have less effect on output.",
+            ),
+            (
+                "b",
+                "Concatenate the user input directly into the instruction and trust users not to abuse it.",
+            ),
             (
                 "c",
-                "Use parameterized templates that place user input in clearly delimited data fields separate from instructions.",
+                "Use parameterized templates that place user input in clearly delimited data fields.",
             ),
-            ("d", "Shorten the system prompt so there is less to override."),
+            (
+                "d",
+                "Shorten the system prompt so there is simply less instruction text for a user to override.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Parameterized templates that keep user input in clearly delimited data fields reduce prompt injection and stay maintainable. Trusting concatenated input is the vulnerability, temperature does not stop injection, and shortening the system prompt does not separate data from instructions.",
         "rationales": {
-            "a": (False, "Temperature does not prevent injected instructions from being followed."),
-            "b": (False, "Direct concatenation with trust is exactly the injection vulnerability."),
+            "a": (False, "Temperature does not stop a user from injecting instructions."),
+            "b": (
+                False,
+                "Concatenating user text into instructions is exactly what enables injection.",
+            ),
             "c": (
                 True,
-                "Delimited parameterized templates separate untrusted data from instructions.",
+                "Parameterized templates keep user input in data fields separate from instructions.",
             ),
-            "d": (False, "A shorter system prompt does not isolate user data from instructions."),
+            "d": (False, "A shorter system prompt does not prevent instruction override."),
         },
     },
     {
@@ -3627,20 +5130,32 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so the model explores other categories."),
-            ("b", "Add many more examples all from the same single category."),
-            ("c", "Remove the examples entirely and rely on the label names."),
-            ("d", "Choose few-shot examples that cover all categories representatively."),
+            (
+                "a",
+                "Raise the sampling temperature so the model explores categories beyond the examples given.",
+            ),
+            (
+                "b",
+                "Add many more few-shot examples, but draw them all from the same single category as before.",
+            ),
+            (
+                "c",
+                "Remove the few-shot examples entirely and rely only on the category label names in the prompt.",
+            ),
+            (
+                "d",
+                "Choose few-shot examples that cover all of the categories representatively and in balance.",
+            ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Few-shot examples should represent the full label space, so covering all categories directly improves classification across them. Piling on same-category examples worsens imbalance, dropping examples loses guidance, and temperature adds randomness rather than category coverage.",
         "rationales": {
-            "a": (False, "Temperature introduces randomness, not balanced category coverage."),
-            "b": (False, "More examples from one category deepen the imbalance."),
-            "c": (False, "Removing examples loses the demonstration the model relies on."),
+            "a": (False, "Temperature cannot fix examples that are biased toward one category."),
+            "b": (False, "More examples from one category deepens the bias rather than fixing it."),
+            "c": (False, "Removing examples discards the guidance few-shot prompting provides."),
             "d": (
                 True,
-                "Representative examples across all categories improve classification coverage.",
+                "Balanced examples across all categories give the model representative guidance.",
             ),
         },
     },
@@ -3654,22 +5169,31 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Run each candidate prompt against an evaluation suite and block promotion if it regresses against the baseline.",
+                "Run each candidate prompt against an evaluation suite and block promotion if it regresses the baseline.",
             ),
-            ("b", "Promote any prompt that looks better in a quick manual demo."),
-            ("c", "Promote prompts on a fixed weekly schedule regardless of quality."),
-            ("d", "Let whoever edited the prompt approve their own change."),
+            (
+                "b",
+                "Promote any prompt that happens to look a little better during a quick manual demo run.",
+            ),
+            (
+                "c",
+                "Promote the current prompt on a fixed weekly schedule regardless of its measured quality.",
+            ),
+            (
+                "d",
+                "Let whoever edited the prompt approve their own change and push it straight to production.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "An automated evaluation gate that blocks regressions against a baseline enforces measured quality before promotion. Anecdotal demos, time-based promotion, and self-approval all let regressions slip through.",
         "rationales": {
             "a": (
                 True,
-                "An evaluation gate against a baseline blocks measured regressions from promotion.",
+                "An evaluation suite that blocks regressions is the objective promotion gate.",
             ),
-            "b": (False, "A quick demo is anecdotal and can hide overall regressions."),
-            "c": (False, "Scheduled promotion ignores whether quality actually improved."),
-            "d": (False, "Self-approval provides no independent quality check."),
+            "b": (False, "A quick manual demo is anecdotal and misses regressions."),
+            "c": (False, "A fixed schedule ignores whether the prompt actually improved."),
+            "d": (False, "Self-approval removes the independent review a gate requires."),
         },
     },
     {
@@ -3680,24 +5204,30 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Repeat the rules inside every user message."),
+            (
+                "a",
+                "Repeat the full set of behavioral rules inside every single user message that is sent.",
+            ),
             (
                 "b",
-                "Place durable behavioral rules in a system prompt distinct from the user message.",
+                "Place the durable behavioral rules in a system prompt kept distinct from the user message.",
             ),
-            ("c", "Rely on the model to remember rules from earlier sessions."),
-            ("d", "Raise temperature so the model follows rules more loosely."),
+            (
+                "c",
+                "Rely on the model to remember the rules it was given during earlier, separate sessions.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature so the model applies the behavioral rules more loosely.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Putting durable rules in a dedicated system prompt separates persistent guidance from per-turn input, improving adherence. Repeating rules in every user message is error-prone, models do not persist rules across sessions on their own, and higher temperature loosens rather than tightens adherence.",
         "rationales": {
-            "a": (False, "Repeating rules in every message is fragile and easy to get wrong."),
-            "b": (
-                True,
-                "A system prompt holds durable rules apart from the user's per-turn message.",
-            ),
-            "c": (False, "The model does not retain rules across sessions by itself."),
-            "d": (False, "Higher temperature reduces, not improves, rule adherence."),
+            "a": (False, "Repeating rules in every user message is wasteful and error-prone."),
+            "b": (True, "A system prompt holds durable rules separate from each user turn."),
+            "c": (False, "Models do not persist rules across independent sessions."),
+            "d": (False, "Higher temperature makes rule-following less reliable, not better."),
         },
     },
     {
@@ -3708,21 +5238,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Move the preamble into the user message unchanged."),
-            ("b", "Double the preamble to be thorough."),
-            ("c", "Trim the preamble to the instructions that measurably affect output quality."),
-            ("d", "Raise temperature to offset the extra tokens."),
+            (
+                "a",
+                "Move the long preamble into the user message unchanged so the system prompt looks shorter.",
+            ),
+            (
+                "b",
+                "Double the length of the preamble to be thorough and leave nothing about the task unstated.",
+            ),
+            (
+                "c",
+                "Trim the preamble down to only the instructions that measurably affect the output quality.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature to offset the extra tokens the long preamble is consuming.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Trimming the preamble to only the instructions that measurably affect output cuts input-token cost while preserving quality. Doubling it raises cost, relocating it unchanged does not reduce tokens, and temperature does not affect token cost.",
         "rationales": {
-            "a": (False, "Moving the same text elsewhere still bills the same tokens."),
-            "b": (False, "Doubling the preamble increases the very cost you want to cut."),
+            "a": (
+                False,
+                "Moving the preamble to the user message does not reduce the token count.",
+            ),
+            "b": (False, "Doubling the preamble increases cost rather than reducing it."),
             "c": (
                 True,
-                "Keeping only impactful instructions reduces token cost without losing quality.",
+                "Trimming to the instructions that matter cuts tokens without hurting quality.",
             ),
-            "d": (False, "Temperature has no effect on input-token cost."),
+            "d": (False, "Temperature does not change how many tokens the preamble costs."),
         },
     },
     {
@@ -3733,12 +5278,21 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Trust the base model's alignment and remove the instructions."),
-            ("b", "Add more 'please be safe' sentences to the prompt."),
-            ("c", "Lower temperature to zero to prevent unsafe output."),
+            (
+                "a",
+                "Trust the base model's built-in alignment and remove the safety instructions from the prompt.",
+            ),
+            (
+                "b",
+                "Add several more please-be-safe sentences to the prompt so the request is clearly stated.",
+            ),
+            (
+                "c",
+                "Lower the sampling temperature to zero so deterministic output cannot be unsafe anymore.",
+            ),
             (
                 "d",
-                "Add Amazon Bedrock Guardrails to enforce content policy independently of the prompt.",
+                "Add Amazon Bedrock Guardrails to enforce the content policy independently of the prompt.",
             ),
         ],
         "correct_option_ids": ["d"],
@@ -3746,14 +5300,11 @@ QUESTIONS: list[dict[str, Any]] = [
         "rationales": {
             "a": (
                 False,
-                "Dropping instructions to rely on alignment reduces, not increases, control.",
+                "Removing instructions and trusting base alignment leaves no enforceable policy.",
             ),
-            "b": (False, "More in-prompt pleas remain bypassable by crafted inputs."),
-            "c": (False, "Temperature does not determine whether output is unsafe."),
-            "d": (
-                True,
-                "Guardrails adds an independent, policy-based safety layer beyond the prompt.",
-            ),
+            "b": (False, "More polite safety sentences are easily bypassed and not enforceable."),
+            "c": (False, "Temperature zero reduces randomness but not harmful content."),
+            "d": (True, "Guardrails enforces content policy as a layer independent of the prompt."),
         },
     },
     {
@@ -3766,19 +5317,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Run a controlled A/B test splitting traffic and compare outcome metrics between variants.",
+                "Run a controlled A/B test that splits traffic and compares outcome metrics between the variants.",
             ),
-            ("b", "Flip all traffic to the new variant and watch for complaints."),
-            ("c", "Pick whichever variant the author prefers."),
-            ("d", "Alternate variants randomly with no metric collection."),
+            (
+                "b",
+                "Flip all production traffic to the new variant at once and just watch for user complaints.",
+            ),
+            (
+                "c",
+                "Pick whichever of the two prompt variants the prompt's author personally happens to prefer.",
+            ),
+            (
+                "d",
+                "Alternate between the variants at random with no metrics collected on either one's results.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "A controlled A/B test on a traffic split with outcome metrics lets the team choose with statistical confidence while limiting risk. A full cutover risks all users, author preference is not evidence, and alternating without metrics yields no comparison.",
         "rationales": {
-            "a": (True, "A controlled A/B test measures outcomes and limits exposure risk."),
-            "b": (False, "A full cutover exposes all users and lacks a clean comparison."),
-            "c": (False, "Author preference is not statistical evidence."),
-            "d": (False, "Alternating without metrics produces no measurable comparison."),
+            "a": (
+                True,
+                "A controlled A/B test with metrics gives evidence of which variant is better.",
+            ),
+            "b": (
+                False,
+                "Flipping all traffic risks a regression and lacks a controlled comparison.",
+            ),
+            "c": (False, "Author preference is not measured evidence."),
+            "d": (False, "Alternating with no metrics produces no comparable data."),
         },
     },
     {
@@ -3789,20 +5355,38 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_response",
         "options": [
-            ("a", "Validate the output against the schema and retry/repair on failure."),
-            ("b", "Provide the target schema and an example of correctly formatted output."),
-            ("c", "Raise temperature so the structure varies more."),
-            ("d", "Ask for output in a different format each time."),
-            ("e", "Remove all schema details from the prompt."),
+            (
+                "a",
+                "Validate the model's output against the schema and retry or repair it on any failure.",
+            ),
+            (
+                "b",
+                "Provide the target schema in the prompt along with an example of correctly formatted output.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature so the output structure varies more from call to call.",
+            ),
+            (
+                "d",
+                "Ask the model to return its output in a different format on each successive request.",
+            ),
+            (
+                "e",
+                "Remove all of the schema details from the prompt so the model has fewer constraints.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Giving the schema with a correct example and validating with retry/repair are the practices that make structured output reliable. Higher temperature, varying formats, and omitting the schema all reduce reliability.",
         "rationales": {
-            "a": (True, "Schema validation with retry/repair catches and fixes malformed output."),
-            "b": (True, "A schema plus a correct example guides the model toward valid structure."),
-            "c": (False, "Higher temperature increases structural variability and errors."),
-            "d": (False, "Changing the format each time defeats a stable parser contract."),
-            "e": (False, "Removing schema details leaves the model to guess the structure."),
+            "a": (
+                True,
+                "Validate-and-repair catches malformed output before it reaches downstream code.",
+            ),
+            "b": (True, "A schema plus a formatted example guides the model to valid structure."),
+            "c": (False, "Higher temperature makes the structure less consistent."),
+            "d": (False, "Varying the requested format defeats reliable parsing."),
+            "e": (False, "Removing schema details leaves the model with no structure to follow."),
         },
     },
     {
@@ -3813,24 +5397,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Keep maintaining a fully separate prompt copy per language."),
+            (
+                "a",
+                "Keep maintaining a fully separate prompt copy for each supported language going forward.",
+            ),
             (
                 "b",
                 "Use one parameterized template with a language parameter instead of separate per-language prompts.",
             ),
-            ("c", "Translate the output after generating only in one language."),
-            ("d", "Let the model pick a language at random."),
+            (
+                "c",
+                "Generate the output in a single language first and then machine-translate it afterward for all the other locales.",
+            ),
+            (
+                "d",
+                "Let the model pick a response language at random on each request and hope it matches the user.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "A single parameterized template with a language parameter keeps one source of truth and consistent behavior across languages, reducing drift. Separate copies drift, post-translation adds a lossy step and may not preserve behavior, and random language selection ignores the user's language.",
         "rationales": {
-            "a": (False, "Separate per-language prompts are exactly what drifts out of sync."),
+            "a": (False, "Separate per-language copies multiply maintenance and drift."),
             "b": (
                 True,
-                "One parameterized template with a language parameter avoids per-language drift.",
+                "One parameterized template with a language parameter stays consistent and maintainable.",
             ),
-            "c": (False, "Post-hoc translation adds a lossy step and may alter intended behavior."),
-            "d": (False, "Random language selection ignores the user's actual language."),
+            "c": (False, "Translating after the fact adds a step and can distort meaning."),
+            "d": (False, "A random response language will frequently not match the user."),
         },
     },
     {
@@ -3841,24 +5434,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Make the prohibitions ALL CAPS for emphasis."),
-            ("b", "Add even more 'do not' rules."),
+            (
+                "a",
+                "Rewrite all of the prohibitions in ALL CAPS so that they stand out and get more emphasis.",
+            ),
+            (
+                "b",
+                "Add even more do-not rules to the prompt so that every single prohibited behavior is explicitly covered.",
+            ),
             (
                 "c",
                 "State the desired behavior positively and specifically, with examples of correct responses.",
             ),
-            ("d", "Raise temperature so the model is more obedient."),
+            (
+                "d",
+                "Raise the sampling temperature so the model becomes more obedient to the prohibition list.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Specifying the desired behavior positively with concrete examples gives the model a clear target, which changes behavior more reliably than prohibitions alone. More 'do not' rules, capitalization, and temperature changes do not clarify what to do instead.",
         "rationales": {
-            "a": (False, "Capitalizing prohibitions does not clarify the intended behavior."),
-            "b": (False, "More prohibitions still leave the desired behavior underspecified."),
+            "a": (False, "Capitalizing prohibitions does not make the model follow them better."),
+            "b": (False, "Piling on more don't rules often confuses rather than clarifies."),
             "c": (
                 True,
-                "Positive, specific guidance with examples gives the model a clear target.",
+                "Stating the wanted behavior positively with examples is clearer and more reliable.",
             ),
-            "d": (False, "Temperature does not make the model more obedient to vague rules."),
+            "d": (False, "Temperature does not increase obedience to prohibitions."),
         },
     },
     {
@@ -3869,24 +5471,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Log prompts to a world-readable location for convenience."),
-            ("b", "Log every full prompt verbatim for completeness."),
-            ("c", "Stop debugging anything to be safe."),
+            (
+                "a",
+                "Log the prompts to a world-readable storage location for the convenience of debugging.",
+            ),
+            (
+                "b",
+                "Log every full prompt verbatim, including user content, for the sake of completeness.",
+            ),
+            (
+                "c",
+                "Stop debugging the application entirely so that no prompt content is ever written to logs.",
+            ),
             (
                 "d",
-                "Log prompt metadata and redacted content, excluding raw PII and sensitive text.",
+                "Log prompt metadata and redacted content, excluding the raw PII and sensitive text.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Logging prompt metadata and redacted content keeps debugging useful while excluding raw PII and sensitive text. Verbatim logging leaks sensitive data, stopping all debugging is impractical, and a world-readable location worsens exposure.",
         "rationales": {
-            "a": (False, "A world-readable log location increases the exposure risk."),
-            "b": (False, "Verbatim prompt logging exposes the PII the review flagged."),
-            "c": (False, "Abandoning debugging is impractical and unnecessary."),
-            "d": (
-                True,
-                "Metadata plus redacted content debugs safely without leaking sensitive data.",
+            "a": (
+                False,
+                "A world-readable log location exposes whatever sensitive content it holds.",
             ),
+            "b": (False, "Logging full prompts writes PII straight into the logs."),
+            "c": (False, "Stopping all debugging throws away needed observability."),
+            "d": (True, "Metadata plus redacted content keeps logs useful without leaking PII."),
         },
     },
     {
@@ -3899,22 +5510,31 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Clearly specify the exact tag format with an example and validate presence of both tags, retrying on failure.",
+                "Clearly specify the exact tag format with an example and validate that both tags are present, retrying on failure.",
             ),
-            ("b", "Assume the closing tag is always present and parse optimistically."),
-            ("c", "Raise temperature so the model adds more tags."),
-            ("d", "Remove the tags and parse by guessing where the answer starts."),
+            (
+                "b",
+                "Assume the closing tag is always present and parse the output optimistically every time.",
+            ),
+            (
+                "c",
+                "Raise the sampling temperature so the model is inclined to add more of the delimiter tags.",
+            ),
+            (
+                "d",
+                "Remove the tags entirely and parse by guessing where the answer section begins and ends.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Specifying the exact tag format with an example and validating both tags with a retry reliably yields extractable output. Optimistic parsing breaks on omissions, temperature does not enforce structure, and removing tags makes extraction guesswork.",
         "rationales": {
             "a": (
                 True,
-                "Exact format with examples plus validation and retry ensures parseable output.",
+                "Specifying the exact tags and validating both, with retry, makes parsing robust.",
             ),
-            "b": (False, "Optimistic parsing fails exactly when the closing tag is missing."),
-            "c": (False, "Temperature does not reliably enforce correct delimiter structure."),
-            "d": (False, "Guessing boundaries without tags is unreliable."),
+            "b": (False, "Assuming the closing tag is present breaks when the model omits it."),
+            "c": (False, "Higher temperature does not reliably produce the required tags."),
+            "d": (False, "Guessing boundaries without delimiters is fragile and error-prone."),
         },
     },
     {
@@ -3925,24 +5545,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Instruct: always provide a confident answer no matter what."),
+            (
+                "a",
+                "Instruct the model to always provide a confident answer no matter what the context contains.",
+            ),
             (
                 "b",
-                "Instruct: answer only from the provided context and include a citation, otherwise state that the context is insufficient.",
+                "Instruct it to answer only from the context with a citation, or state the context is insufficient.",
             ),
-            ("c", "Instruct: cite a source only if the user asks."),
-            ("d", "Instruct: ignore the context and use general knowledge."),
+            (
+                "c",
+                "Instruct the model to include a source citation only when the user explicitly asks for one.",
+            ),
+            (
+                "d",
+                "Instruct the model to ignore the provided context and answer from its general knowledge.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "An instruction to answer only from context with a citation, or else declare the context insufficient, directly encodes the cite-or-decline policy. Always answering, optional citing, and ignoring context all violate the governance requirement.",
         "rationales": {
-            "a": (False, "Always answering confidently invites unsupported fabrication."),
+            "a": (False, "Always answering confidently invites ungrounded hallucination."),
             "b": (
                 True,
-                "This instruction forces context-grounded cited answers or an explicit declination.",
+                "Answering from context with a citation or declining keeps answers grounded.",
             ),
-            "c": (False, "Optional citing fails the mandatory-attribution policy."),
-            "d": (False, "Ignoring context defeats grounding and citation entirely."),
+            "c": (False, "Citing only on request leaves most answers unverifiable."),
+            "d": (False, "Ignoring the context defeats the purpose of grounded retrieval."),
         },
     },
     {
@@ -3955,27 +5584,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Exposed reasoning may leak sensitive or confusing intermediate content to users.",
+                "Exposed reasoning can leak sensitive or confusing intermediate content to end users.",
             ),
-            ("b", "It increases output tokens, raising cost and latency."),
-            ("c", "It always makes every task less accurate."),
-            ("d", "It changes the model's weights permanently."),
-            ("e", "It requires fine-tuning before it can be used."),
+            (
+                "b",
+                "It increases the number of output tokens, which raises both cost and latency per call.",
+            ),
+            (
+                "c",
+                "It always makes every task less accurate than answering without any reasoning at all.",
+            ),
+            (
+                "d",
+                "It permanently changes the underlying model's weights each time it is used in a prompt.",
+            ),
+            (
+                "e",
+                "It requires the model to be fine-tuned first before step-by-step reasoning can be used.",
+            ),
         ],
         "correct_option_ids": ["a", "b"],
         "explanation": "Verbose reasoning raises token cost and latency and can expose sensitive or confusing intermediate content, both legitimate downsides. It does not universally hurt accuracy, does not alter weights, and does not require fine-tuning.",
         "rationales": {
-            "a": (True, "Showing intermediate reasoning can leak sensitive or confusing content."),
-            "b": (True, "Reasoning tokens add to output cost and latency."),
-            "c": (
-                False,
-                "Chain-of-thought often helps reasoning tasks rather than always hurting.",
-            ),
-            "d": (False, "Prompting for reasoning does not change model weights."),
-            "e": (
-                False,
-                "Chain-of-thought is a prompting technique, not a fine-tuning prerequisite.",
-            ),
+            "a": (True, "Exposed reasoning can reveal sensitive or confusing intermediate steps."),
+            "b": (True, "More reasoning tokens raise cost and latency."),
+            "c": (False, "Reasoning helps many tasks; it does not always reduce accuracy."),
+            "d": (False, "Prompting does not change the model's weights."),
+            "e": (False, "Chain-of-thought is a prompting technique and needs no fine-tuning."),
         },
     },
     {
@@ -3986,18 +5621,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Delete all prompt versions and start over."),
-            ("b", "Leave the bad prompt live while debugging it in production."),
-            ("c", "Roll back to the previous known-good prompt version, then investigate."),
-            ("d", "Raise temperature to mask the bad answers."),
+            (
+                "a",
+                "Delete every stored prompt version and start authoring the prompt over again from scratch.",
+            ),
+            (
+                "b",
+                "Leave the bad prompt live in production while the team debugs the problem in place there.",
+            ),
+            (
+                "c",
+                "Roll back to the previous known-good prompt version right away, then investigate the cause.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature in an attempt to mask the bad answers the prompt is producing.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "With versioned prompts, rolling back to the last known-good version restores service quickly before investigating the regression. Leaving the bad prompt live prolongs harm, deleting all versions removes the rollback target, and temperature does not fix the regression.",
         "rationales": {
-            "a": (False, "Deleting all versions destroys the known-good target to roll back to."),
-            "b": (False, "Leaving the bad prompt live continues to harm users."),
-            "c": (True, "Rolling back to the known-good version restores quality immediately."),
-            "d": (False, "Temperature cannot repair a regressed prompt's bad answers."),
+            "a": (
+                False,
+                "Deleting all versions destroys the known-good one you need to roll back to.",
+            ),
+            "b": (False, "Leaving the bad prompt live prolongs the user-facing incident."),
+            "c": (
+                True,
+                "Rolling back to the known-good version stops the harm, then you investigate.",
+            ),
+            "d": (False, "Temperature cannot mask a fundamentally bad prompt."),
         },
     },
     {
@@ -4008,21 +5661,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so the tone is more lively."),
-            ("b", "Describe the tone differently in each user turn."),
-            ("c", "Let the model choose a tone per response."),
+            (
+                "a",
+                "Raise the sampling temperature so the assistant's tone comes across as a bit more lively.",
+            ),
+            (
+                "b",
+                "Describe the desired tone slightly differently in each individual user turn as it comes up.",
+            ),
+            (
+                "c",
+                "Let the model choose whatever tone it judges best on a per-response basis each time.",
+            ),
             (
                 "d",
-                "Define the persona and tone once in the system prompt that applies to every turn.",
+                "Define the persona and tone once in the system prompt so it applies to every turn.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Defining the persona and tone in the system prompt applies it consistently to every turn. Re-describing tone per turn invites drift, letting the model choose per response causes inconsistency, and temperature increases variability.",
         "rationales": {
-            "a": (False, "Higher temperature increases, not stabilizes, tonal variation."),
-            "b": (False, "Different per-turn tone descriptions cause the drift to continue."),
-            "c": (False, "Letting the model pick a tone each time yields inconsistency."),
-            "d": (True, "A system-prompt persona persists consistently across all turns."),
+            "a": (False, "Temperature changes variability, not a consistent defined persona."),
+            "b": (False, "Re-describing the tone each turn invites drift and inconsistency."),
+            "c": (
+                False,
+                "Letting the model pick a tone per response yields an inconsistent persona.",
+            ),
+            "d": (True, "A persona set once in the system prompt stays consistent across turns."),
         },
     },
     {
@@ -4035,22 +5700,34 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Add validation and a conditional branch that handles or repairs malformed output before the downstream step.",
+                "Add validation and a conditional branch that handles or repairs malformed output before the next step.",
             ),
-            ("b", "Remove validation so the flow never stops."),
-            ("c", "Retry the entire flow from the start indefinitely on any error."),
-            ("d", "Raise temperature on the upstream step to avoid malformed output."),
+            (
+                "b",
+                "Remove the validation from the flow so that it never stops partway through on any input.",
+            ),
+            (
+                "c",
+                "Retry the entire flow from its very first step indefinitely whenever any error occurs.",
+            ),
+            (
+                "d",
+                "Raise the sampling temperature on the upstream step to avoid producing malformed output.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Adding validation and a conditional branch to handle or repair malformed output keeps the flow resilient at the point of failure. Removing validation hides errors, infinite full-flow retries do not fix the malformed step, and higher temperature makes malformed output more likely.",
         "rationales": {
             "a": (
                 True,
-                "A validation branch repairs or routes malformed output before it breaks the next step.",
+                "A validation branch handles or repairs bad output before it reaches the next step.",
             ),
-            "b": (False, "Removing validation lets malformed data propagate silently."),
-            "c": (False, "Endless full-flow retries repeat the same malformed-output failure."),
-            "d": (False, "Higher temperature increases the chance of malformed output."),
+            "b": (False, "Removing validation lets malformed output flow downstream unchecked."),
+            "c": (
+                False,
+                "Retrying the whole flow forever can loop endlessly on a persistent error.",
+            ),
+            "d": (False, "Temperature does not guarantee well-formed upstream output."),
         },
     },
     {
@@ -4061,21 +5738,30 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Add more easy happy-path questions to the set."),
+            (
+                "a",
+                "Add more easy, happy-path questions to the evaluation set so the prompt scores higher.",
+            ),
             (
                 "b",
                 "Build an evaluation set that includes edge cases and difficult, representative production queries.",
             ),
-            ("c", "Shrink the evaluation set to speed it up."),
-            ("d", "Evaluate only on questions the prompt already answers well."),
+            (
+                "c",
+                "Shrink the evaluation set down to a handful of items so the suite finishes running faster.",
+            ),
+            (
+                "d",
+                "Evaluate only on the questions that the current prompt already answers well in practice.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "An evaluation set that includes edge cases and representative difficult queries predicts production behavior far better. Adding more easy questions, shrinking the set, or cherry-picking easy wins all keep the evaluation unrepresentative.",
         "rationales": {
-            "a": (False, "More easy questions keep the set unrepresentative of real difficulty."),
-            "b": (True, "Representative edge cases make evaluation predictive of production."),
-            "c": (False, "A smaller set does not add the missing difficult cases."),
-            "d": (False, "Evaluating only known-good questions hides real weaknesses."),
+            "a": (False, "More easy questions inflate the score without testing real difficulty."),
+            "b": (True, "Edge cases and representative hard queries reveal true prompt quality."),
+            "c": (False, "A tiny eval set misses the behaviors you need to measure."),
+            "d": (False, "Testing only known-good questions hides the prompt's weaknesses."),
         },
     },
     {
@@ -4086,24 +5772,39 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Raise temperature so refusals sound more natural."),
-            ("b", "Let the model phrase refusals freely each time."),
+            (
+                "a",
+                "Raise the sampling temperature so that the model's refusals come out sounding more natural.",
+            ),
+            (
+                "b",
+                "Let the model phrase each out-of-scope refusal freely in whatever wording it chooses.",
+            ),
             (
                 "c",
-                "Instruct the model to emit a defined refusal structure (for example a known field or code) that the UI can detect reliably.",
+                "Instruct the model to emit a defined refusal structure, such as a known field or code, the UI can detect.",
             ),
-            ("d", "Return a generic 500 error for anything out of scope."),
+            (
+                "d",
+                "Return a generic HTTP 500 server error for anything that falls outside the allowed scope.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "Having the model emit a defined refusal structure the UI can detect gives consistent, machine-detectable refusals that render predictably. Free-form refusals are hard to detect, temperature adds variability, and a 500 error conflates a deliberate refusal with a system failure.",
         "rationales": {
-            "a": (False, "Higher temperature makes refusal format less predictable."),
-            "b": (False, "Free-form refusals vary and are hard for code to detect."),
+            "a": (
+                False,
+                "Natural-sounding refusals are still unstructured and hard to detect reliably.",
+            ),
+            "b": (False, "Free-form refusals vary and cannot be detected consistently by the UI."),
             "c": (
                 True,
-                "A defined refusal structure is consistent and reliably detectable by the UI.",
+                "A defined refusal structure lets the UI detect and handle refusals reliably.",
             ),
-            "d": (False, "A 500 error misrepresents an intentional refusal as a server failure."),
+            "d": (
+                False,
+                "A generic 500 error hides a deliberate refusal behind a server-fault code.",
+            ),
         },
     },
     {
@@ -4114,9 +5815,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Add the features but skip measuring whether the core value works."),
-            ("b", "Accept every request so the POC doubles as the production build."),
-            ("c", "Pause the POC until all production requirements are fully specified."),
+            (
+                "a",
+                "Add all of the requested extra features but skip measuring whether the core value works.",
+            ),
+            (
+                "b",
+                "Accept every incoming request so the POC quietly doubles as the real production build.",
+            ),
+            (
+                "c",
+                "Pause the POC until every production requirement has been fully specified in detail first.",
+            ),
             (
                 "d",
                 "Keep the POC scoped to validating core value and defer production features to a later phase.",
@@ -4127,19 +5837,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "rationales": {
             "a": (
                 False,
-                "Adding features without measuring value leaves the core question unanswered.",
+                "Adding features while skipping core-value measurement defeats the POC's purpose.",
             ),
             "b": (
                 False,
-                "Turning the POC into a production build abandons its fast-validation purpose.",
+                "Treating the POC as production undermines the throwaway, fast-learning goal.",
             ),
             "c": (
                 False,
-                "Pausing for full production specs stalls the value question indefinitely.",
+                "Pausing for full specification stalls the quick validation the POC is for.",
             ),
             "d": (
                 True,
-                "Holding POC scope to the value question keeps the two-week goal achievable.",
+                "Scoping to core value and deferring production features keeps the POC focused.",
             ),
         },
     },
@@ -4153,27 +5863,36 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Choose among models actually available in the mandated Region, or reconsider residency with stakeholders.",
+                "Choose among the models actually available in the mandated Region, or revisit residency with stakeholders.",
             ),
-            ("b", "Use the preferred model from another Region and ignore the residency policy."),
-            ("c", "Pick the model with the most parameters regardless of Region."),
+            (
+                "b",
+                "Use the preferred model from another Region and simply ignore the data-residency policy.",
+            ),
+            (
+                "c",
+                "Pick the model with the most parameters regardless of which Region it is offered in.",
+            ),
             (
                 "d",
-                "Store data in the mandated Region but call the model from a non-compliant Region silently.",
+                "Store data in the mandated Region but silently call the model from a non-compliant Region.",
             ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "Region availability bounded by a data-residency policy constrains which models are even eligible, so selection must respect it. Ignoring residency, chasing parameter count, or quietly routing to a non-compliant Region all violate the governing constraint.",
         "rationales": {
-            "a": (True, "Model choice must respect the Region the residency policy mandates."),
-            "b": (False, "Ignoring the residency policy violates a hard governance constraint."),
+            "a": (
+                True,
+                "Choosing from Region-available models, or revisiting residency openly, respects the policy.",
+            ),
+            "b": (False, "Ignoring the residency policy violates the compliance requirement."),
             "c": (
                 False,
-                "Parameter count is irrelevant if the model is not available in the required Region.",
+                "Parameter count is irrelevant if the model is not available in the Region.",
             ),
             "d": (
                 False,
-                "Silently invoking from a non-compliant Region breaches the residency policy.",
+                "Silently calling a non-compliant Region breaches residency while hiding it.",
             ),
         },
     },
@@ -4185,24 +5904,33 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Append every chunk with a fresh random ID on each run."),
+            (
+                "a",
+                "Append each chunk with a freshly generated random identifier on every run of the pipeline.",
+            ),
             (
                 "b",
                 "Upsert each chunk using a stable deterministic ID derived from its source and position.",
             ),
-            ("c", "Rely on operators to remember not to re-run the job."),
-            ("d", "Raise the embedding dimension to make duplicates less similar."),
+            (
+                "c",
+                "Rely on operators to simply remember not to run the ingestion job more than once per file.",
+            ),
+            (
+                "d",
+                "Raise the embedding dimension so that duplicated chunks become less similar to each other.",
+            ),
         ],
         "correct_option_ids": ["b"],
         "explanation": "Upserting on a stable deterministic ID means a re-run overwrites the same record instead of adding a duplicate. Random IDs guarantee duplicates, relying on human memory is unreliable, and embedding dimension does not affect duplicate records.",
         "rationales": {
-            "a": (False, "Fresh random IDs create a new record every run, causing duplicates."),
-            "b": (
-                True,
-                "A stable deterministic ID makes re-ingestion an idempotent upsert, not a duplicate insert.",
+            "a": (False, "Random IDs per run create duplicate chunks on reprocessing."),
+            "b": (True, "A stable deterministic ID makes re-ingestion idempotent via upsert."),
+            "c": (False, "Relying on operator memory is not a reliable idempotency control."),
+            "d": (
+                False,
+                "Embedding dimension does not prevent duplicate chunks from being written.",
             ),
-            "c": (False, "Depending on operators to avoid re-runs is not a reliable control."),
-            "d": (False, "Embedding dimension does not prevent duplicate index entries."),
         },
     },
     {
@@ -4213,18 +5941,30 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "A vector index on a single unmonitored EC2 instance."),
-            ("b", "A self-managed vector database cluster the team patches and scales."),
-            ("c", "A managed vector option via Amazon Bedrock Knowledge Bases."),
-            ("d", "Vectors kept in a local file on a developer's machine."),
+            (
+                "a",
+                "A vector index on a single unmonitored EC2 instance that the team sets up and forgets.",
+            ),
+            (
+                "b",
+                "A self-managed vector database cluster that the small team patches and scales on its own.",
+            ),
+            ("c", "A managed vector store option provided through Amazon Bedrock Knowledge Bases."),
+            (
+                "d",
+                "Vectors kept in a local file on one developer's machine as the system of record.",
+            ),
         ],
         "correct_option_ids": ["c"],
         "explanation": "A managed vector option through Knowledge Bases offloads patching, scaling, and backups, which suits a team with no DBAs. A self-managed cluster or an unmonitored single instance adds the very chores they want to avoid, and a local file is neither durable nor shareable.",
         "rationales": {
-            "a": (False, "A single unmonitored instance adds operational and reliability risk."),
-            "b": (False, "A self-managed cluster requires the DBA work the team cannot staff."),
-            "c": (True, "A managed vector store removes patching, scaling, and backup chores."),
-            "d": (False, "A local developer file is not durable, shared, or production-ready."),
+            "a": (False, "A single unmonitored instance is fragile and operationally risky."),
+            "b": (
+                False,
+                "A self-managed cluster is the operational load the small team should avoid.",
+            ),
+            "c": (True, "A managed vector store minimizes operations for a small team."),
+            "d": (False, "A local file is neither durable, shared, nor scalable."),
         },
     },
     {
@@ -4235,23 +5975,35 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Shrink all chunks to one sentence so citations are tiny but context is lost."),
-            ("b", "Cite the entire document every time."),
-            ("c", "Remove citations to avoid confusion."),
+            (
+                "a",
+                "Shrink every chunk down to a single sentence so citations are tiny but context is lost.",
+            ),
+            (
+                "b",
+                "Cite the entire source document each time, regardless of which part supported the claim.",
+            ),
+            (
+                "c",
+                "Remove the citations from answers altogether to avoid confusing users with references.",
+            ),
             (
                 "d",
-                "Retrieve coarse context but cite the specific passage/offset within it that supports the claim.",
+                "Retrieve coarse context but cite the specific passage or offset within it that supports the claim.",
             ),
         ],
         "correct_option_ids": ["d"],
         "explanation": "Retrieving coarse context while citing the specific supporting passage or offset gives precise, verifiable citations without losing the surrounding context. Document-level citations are too broad, removing citations loses verifiability, and one-sentence chunks sacrifice context.",
         "rationales": {
-            "a": (False, "One-sentence chunks give tiny citations but discard needed context."),
-            "b": (False, "Whole-document citations are too broad to locate the evidence."),
-            "c": (False, "Removing citations eliminates the verifiability users want."),
+            "a": (False, "Single-sentence chunks lose the surrounding context the answer needs."),
+            "b": (
+                False,
+                "Citing the whole document does not tell users which part supports the claim.",
+            ),
+            "c": (False, "Removing citations eliminates the verifiability users rely on."),
             "d": (
                 True,
-                "Coarse retrieval with a precise in-passage citation balances precision and context.",
+                "Coarse retrieval with precise passage-level citation gives both context and traceability.",
             ),
         },
     },
@@ -4265,11 +6017,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Maintain the shared prompt as one managed, versioned template that all teams reference.",
+                "Maintain the shared prompt as one managed, versioned template that every team references.",
             ),
-            ("b", "Keep per-team copies and email everyone when the prompt changes."),
-            ("c", "Let each team decide independently whether to apply safety updates."),
-            ("d", "Store the canonical prompt only in one engineer's local file."),
+            (
+                "b",
+                "Keep a separate per-team copy of the prompt and email everyone on the team whenever it changes.",
+            ),
+            (
+                "c",
+                "Let each team decide independently whether and when to apply the required safety updates to its copy.",
+            ),
+            (
+                "d",
+                "Store the one canonical prompt only in a single engineer's local file on their laptop.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": "A single managed, versioned template that all teams reference ensures a safety update applies everywhere at once, preventing drift. Per-team copies with email notices, independent decisions, and a lone local file all let copies fall out of sync.",

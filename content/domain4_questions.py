@@ -27,11 +27,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Add a lightweight classifier that routes easy queries to a small model and hard ones to the large model.",
+                "Add a classifier that routes easy queries to a small model and hard ones to the large one.",
             ),
-            ("b", "Send every request to the largest model so quality is never at risk."),
-            ("c", "Buy provisioned throughput sized to the busiest minute of the day."),
-            ("d", "Cache every response and replay it for all future requests."),
+            (
+                "b",
+                "Send every request to the flagship model and buy provisioned throughput to absorb the load.",
+            ),
+            (
+                "c",
+                "Buy Bedrock provisioned throughput sized to the busiest minute so throttling never happens.",
+            ),
+            (
+                "d",
+                "Cache every single response in ElastiCache and replay it for all later analytical questions.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -62,9 +71,18 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Move the model to provisioned throughput sized to the sustained load."),
-            ("b", "Stay on-demand because per-request pricing is always cheapest."),
-            ("c", "Provision far above peak so there is never any throttling."),
-            ("d", "Rotate the request across several models each hour to find a lower rate."),
+            (
+                "b",
+                "Stay on on-demand pricing because per-request billing is cheaper at any sustained volume.",
+            ),
+            (
+                "c",
+                "Provision throughput far above the observed peak so a surge can never cause throttling.",
+            ),
+            (
+                "d",
+                "Rotate each request across several Bedrock models every hour to chase a lower token rate.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -92,10 +110,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Move the workload to batch or asynchronous inference."),
-            ("b", "Add more real-time replicas to finish faster."),
-            ("c", "Keep an always-warm endpoint sized for peak interactive load."),
-            ("d", "Invoke each document twice and keep the better summary."),
+            ("a", "Move the workload to Bedrock batch or asynchronous inference."),
+            ("b", "Add more real-time on-demand replicas so the nightly run finishes faster."),
+            ("c", "Keep an always-warm endpoint sized for peak interactive daytime load."),
+            ("d", "Invoke each document twice in parallel and keep the better summary."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -123,9 +141,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Retrieve and include only the passages relevant to each query."),
-            ("b", "Raise the model's max output tokens so larger prompts fit."),
-            ("c", "Always send the whole manual to be safe."),
-            ("d", "Switch to a model with a bigger context window and keep stuffing it."),
+            ("b", "Raise the model's max-output-tokens limit so the oversized prompt still fits."),
+            ("c", "Keep sending the whole manual every call to be safe about missing context."),
+            ("d", "Switch to a bigger-context-window model and keep stuffing the full manual."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -153,10 +171,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Cache responses for the identical deterministic prompts and serve from cache."),
-            ("b", "Cache every prompt indefinitely regardless of how variable it is."),
-            ("c", "Move the FAQ path to a larger model for faster answers."),
-            ("d", "Remove the FAQ feature to shed the load."),
+            ("a", "Cache the identical deterministic FAQ responses and serve them from cache."),
+            (
+                "b",
+                "Cache every prompt in ElastiCache indefinitely regardless of how variable it is.",
+            ),
+            (
+                "c",
+                "Move the FAQ path to the flagship model so the repeated answers come back faster.",
+            ),
+            ("d", "Remove the FAQ feature entirely to shed its share of the traffic and spend."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -185,9 +209,15 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Tag resources and track usage so cost is attributable per feature and team."),
-            ("b", "Cut the overall budget and hope usage falls into line."),
-            ("c", "Optimize a component at random and watch the total bill."),
-            ("d", "Assume the largest model is the only driver and swap it."),
+            (
+                "b",
+                "Cut the overall budget by a flat percentage and hope real usage falls into line.",
+            ),
+            (
+                "c",
+                "Optimize one component chosen at random and watch whether the total bill moves.",
+            ),
+            ("d", "Assume the flagship model is the only driver and swap it for a cheaper one."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -215,9 +245,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Right-size to a smaller instance type and enable autoscaling to the real load."),
-            ("b", "Keep the instance but double its size for headroom."),
-            ("c", "Add a second identical endpoint behind a load balancer."),
-            ("d", "Leave it running continuously to avoid any cold starts ever."),
+            ("b", "Keep the current instance but double its size to leave generous headroom."),
+            ("c", "Add a second identical GPU endpoint behind a load balancer for throughput."),
+            ("d", "Leave the endpoint running continuously so a cold start can never happen."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -246,9 +276,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Use cross-region inference to spread overflow demand across Regions on demand."),
-            ("b", "Permanently provision double capacity in the primary Region."),
-            ("c", "Drop requests that would exceed the current Region's quota."),
-            ("d", "Retry throttled calls in a tight loop until they succeed."),
+            ("b", "Permanently provision double the capacity in the primary Region for the peaks."),
+            ("c", "Drop any request that would exceed the current Region's quota during a surge."),
+            ("d", "Retry throttled calls in a tight loop with no backoff until each one succeeds."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -277,9 +307,15 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Move the classification step to the smaller model that meets the accuracy bar."),
-            ("b", "Keep the flagship model everywhere for consistency."),
-            ("c", "Run both models and compare on every request."),
-            ("d", "Remove the classification step to save calls."),
+            (
+                "b",
+                "Keep the flagship model on this step for consistency with the rest of the stack.",
+            ),
+            (
+                "c",
+                "Run both the flagship and the small model on every request and compare outputs.",
+            ),
+            ("d", "Remove the classification step altogether to save the model calls it makes."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -308,9 +344,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Prompt caching of the shared static prefix so it is not reprocessed each call."),
-            ("b", "Lowering the temperature to make responses shorter."),
-            ("c", "Switching to a model with a smaller context window."),
-            ("d", "Removing the tool definitions the agent relies on."),
+            ("b", "Lower the sampling temperature so the model emits shorter, cheaper responses."),
+            ("c", "Switch to a model with a smaller context window to reduce the prefix cost."),
+            ("d", "Remove the tool definitions the agent relies on so the preamble is shorter."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -371,10 +407,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Stay on on-demand pricing so idle time costs nothing."),
-            ("b", "Buy provisioned throughput sized to the busiest hour."),
-            ("c", "Buy provisioned throughput sized to the daily average."),
-            ("d", "Keep a dedicated warm endpoint for instant responses."),
+            ("a", "Stay on on-demand pricing so the long idle gaps cost nothing at all."),
+            ("b", "Buy Bedrock provisioned throughput sized to the single busiest hour of use."),
+            ("c", "Buy provisioned throughput sized to the daily average request rate instead."),
+            ("d", "Keep a dedicated warm SageMaker endpoint standing by for instant responses."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -402,9 +438,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Constrain the output to the label and set a small max-output-tokens limit."),
-            ("b", "Increase max-output-tokens so responses are never cut off."),
-            ("c", "Switch to the largest available model."),
-            ("d", "Add more few-shot examples to every prompt."),
+            ("b", "Increase the max-output-tokens limit so verbose answers are never truncated."),
+            ("c", "Switch the classification call to the largest available flagship model."),
+            ("d", "Add several more few-shot examples to every prompt to steer the output."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -434,9 +470,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Distill the small model since sustained volume amortizes the upfront cost."),
-            ("b", "Keep the general model because any custom model is risky."),
-            ("c", "Distill only if the task runs for a single day."),
-            ("d", "Choose based on which model has the larger context window."),
+            ("b", "Keep the general model because custom distilled models are always too risky."),
+            ("c", "Distill only if the narrow task will run for a single day of production."),
+            ("d", "Decide purely on which candidate model advertises the larger context window."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -466,11 +502,14 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Provision for the sustained load and absorb rare spikes with on-demand or cross-region overflow.",
+                "Provision for the sustained load and absorb rare spikes with on-demand overflow.",
             ),
-            ("b", "Provision for the all-time peak so throttling is impossible."),
-            ("c", "Disable throttling limits entirely."),
-            ("d", "Add a fixed delay to every request to flatten spikes."),
+            ("b", "Provision throughput for the all-time peak so throttling becomes impossible."),
+            ("c", "Disable the service throttling limits entirely so no request is ever rejected."),
+            (
+                "d",
+                "Add a fixed delay to every request to flatten spikes before they reach the model.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -499,9 +538,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Embed only new or changed documents and reuse existing vectors."),
-            ("b", "Re-embed everything but on a cheaper schedule."),
-            ("c", "Switch to a higher-dimension embedding model."),
-            ("d", "Embed each document twice to improve recall."),
+            ("b", "Re-embed the whole corpus every run but move it to a cheaper nightly schedule."),
+            ("c", "Switch to a higher-dimension embedding model to improve downstream recall."),
+            ("d", "Embed each document twice per run and average the vectors for better recall."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -531,9 +570,12 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Reject or adjust the change so the quality bar holds, then re-measure cost."),
-            ("b", "Ship it because the savings are large."),
-            ("c", "Lower the quality bar so the change passes."),
-            ("d", "Stop measuring quality so the regression is not visible."),
+            ("b", "Ship the change as-is because the halved cost outweighs the accuracy drop."),
+            ("c", "Lower the committed quality bar so the cheaper configuration passes review."),
+            (
+                "d",
+                "Stop measuring quality on this path so the regression stays out of the dashboards.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -563,9 +605,12 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Run the cheap input check first and skip the model call when it fails."),
-            ("b", "Keep the order but buy provisioned throughput for the model."),
-            ("c", "Call the model twice and keep whichever output passes."),
-            ("d", "Remove the policy check to stop discarding outputs."),
+            (
+                "b",
+                "Keep the current order but buy provisioned throughput to make the model cheaper.",
+            ),
+            ("c", "Call the model twice per request and keep whichever output passes the check."),
+            ("d", "Remove the policy check so no expensive outputs are ever discarded again."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -595,9 +640,15 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Move archival vectors to a lower-cost tier and keep active data hot."),
-            ("b", "Keep everything in the hot tier for simplicity."),
-            ("c", "Delete the archive outright to save cost."),
-            ("d", "Duplicate the archive into a second hot store for resilience."),
+            (
+                "b",
+                "Keep every vector in the hot high-throughput tier to avoid any tiering complexity.",
+            ),
+            ("c", "Delete the archived embeddings outright to remove their share of storage cost."),
+            (
+                "d",
+                "Duplicate the archive into a second hot vector store for extra read resilience.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -627,9 +678,12 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Fine-tune once so inference uses short prompts, amortizing over the volume."),
-            ("b", "Keep the long few-shot prompts because fine-tuning has upfront cost."),
-            ("c", "Shorten prompts by removing instructions the task needs."),
-            ("d", "Raise max output tokens to compensate for shorter prompts."),
+            (
+                "b",
+                "Keep the long few-shot prompts because the fine-tune's upfront cost is too high.",
+            ),
+            ("c", "Shorten the prompts by stripping out task instructions the model still needs."),
+            ("d", "Raise the max-output-tokens limit to compensate for the shortened prompts."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -659,9 +713,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Stream tokens to the client as they are generated."),
-            ("b", "Buffer the full response and send it once complete."),
-            ("c", "Truncate every answer to one sentence."),
-            ("d", "Show a longer loading animation."),
+            ("b", "Buffer the whole response server-side and send it once generation completes."),
+            ("c", "Truncate every answer to a single sentence so responses return faster."),
+            ("d", "Show a longer, more detailed loading animation while the answer generates."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -690,9 +744,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Process items with bounded parallelism that stays within service quotas."),
-            ("b", "Keep it serial but switch to a larger model."),
-            ("c", "Fire unlimited parallel calls with no concurrency cap."),
-            ("d", "Reduce the item count to fit the serial rate."),
+            ("b", "Keep the loop strictly serial but switch each call to a larger, faster model."),
+            ("c", "Fire unlimited parallel calls with no concurrency cap to saturate the model."),
+            ("d", "Reduce the number of items in the job so the serial rate meets the target."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -721,11 +775,14 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Tune the vector index and query (e.g., ANN parameters, filters) to cut retrieval time.",
+                "Tune the vector index and query (ANN parameters, filters) to cut retrieval time.",
             ),
-            ("b", "Switch to a faster generation model."),
-            ("c", "Increase max output tokens."),
-            ("d", "Add more few-shot examples to the prompt."),
+            (
+                "b",
+                "Switch generation to a faster model even though traces show it is not the bottleneck.",
+            ),
+            ("c", "Increase the max-output-tokens limit so the generation stage finishes sooner."),
+            ("d", "Add several few-shot examples to the prompt to make retrieval more precise."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -752,10 +809,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Trim the context to the relevant passages before sending."),
-            ("b", "Lower the temperature to speed up generation."),
-            ("c", "Request more output tokens so the model finishes sooner."),
-            ("d", "Send the full context but to a bigger-window model."),
+            ("a", "Trim the context to the relevant passages before sending the prompt."),
+            ("b", "Lower the sampling temperature in the hope that generation speeds up."),
+            ("c", "Request more output tokens so the model is pushed to finish sooner."),
+            ("d", "Send the full oversized context but to a model with a bigger window."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -784,13 +841,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            (
-                "a",
-                "Configure autoscaling that adds instances on the surge signal and scales back after.",
-            ),
-            ("b", "Permanently provision for the midday peak."),
-            ("c", "Lower the latency target so the timeouts count as passing."),
-            ("d", "Disable health checks so slow instances keep serving."),
+            ("a", "Configure autoscaling that adds instances on the surge and scales back after."),
+            ("b", "Permanently provision the endpoint for the midday peak so it never times out."),
+            ("c", "Lower the latency target so the midday timeouts are recorded as passing p99."),
+            ("d", "Disable endpoint health checks so slow instances keep serving during surges."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -819,9 +873,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Issue the independent tool calls in parallel and await all results."),
-            ("b", "Add a retry to each call to make them faster."),
-            ("c", "Increase the model's temperature."),
-            ("d", "Move the calls into the system prompt as text."),
+            ("b", "Add a retry wrapper to each sequential tool call so slow ones return faster."),
+            ("c", "Increase the model's sampling temperature to speed up the agent loop."),
+            ("d", "Move the tool calls into the system prompt as plain descriptive text."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -852,11 +906,14 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Try the small model first and escalate to the large model only when confidence is low.",
+                "Try the small model first and escalate to the large one when confidence is low.",
             ),
-            ("b", "Always call the large model for maximum accuracy."),
-            ("c", "Always call the small model and accept the misses."),
-            ("d", "Call both models for every query and pick randomly."),
+            ("b", "Always call the large model so accuracy is maximized on every single query."),
+            ("c", "Always call the small model and simply accept the misses on hard queries."),
+            (
+                "d",
+                "Call both the small and large model on every query and pick an answer at random.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -884,10 +941,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Track p95/p99 tail latency, not just the average."),
-            ("b", "Track only the minimum observed latency."),
-            ("c", "Track total request count per day."),
-            ("d", "Track the average over a longer window."),
+            ("a", "Track p95 and p99 tail latency instead of relying on the average."),
+            ("b", "Track only the minimum observed latency across all of the requests."),
+            ("c", "Track the total request count per day as the primary health signal."),
+            ("d", "Track the mean latency over a much longer rolling time window."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -915,9 +972,12 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Use batch processing with high bounded parallelism within quotas."),
-            ("b", "Process documents one at a time to protect per-item latency."),
-            ("c", "Use a streaming endpoint sized for a single interactive user."),
-            ("d", "Lower the embedding dimension to speed each call and ignore quotas."),
+            ("b", "Process documents one at a time to keep per-item latency as low as possible."),
+            ("c", "Use a single streaming endpoint sized for one interactive user at a time."),
+            (
+                "d",
+                "Lower the embedding dimension to speed each call and ignore the service quotas.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -946,13 +1006,13 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
+            ("a", "Keep a minimum warm capacity so a ready instance serves the first request."),
             (
-                "a",
-                "Keep a minimum warm capacity (or warm pool) so a ready instance serves the first request.",
+                "b",
+                "Increase the max-output-tokens limit so the first request finishes generating sooner.",
             ),
-            ("b", "Increase max output tokens to make generation finish sooner."),
-            ("c", "Lower temperature to reduce cold-start time."),
-            ("d", "Add retries so the slow first request eventually returns."),
+            ("c", "Lower the sampling temperature in an attempt to shorten the cold-start time."),
+            ("d", "Add client retries so the slow first request eventually returns a response."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1011,10 +1071,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Add per-stage timing/traces to find the actual bottleneck."),
-            ("b", "Optimize the generation step because it is usually slowest."),
-            ("c", "Rewrite the whole pipeline for speed."),
-            ("d", "Add capacity everywhere at once."),
+            ("a", "Add per-stage timing and traces to find the actual bottleneck first."),
+            ("b", "Optimize the generation step now because it is usually the slowest stage."),
+            ("c", "Rewrite the whole multi-stage pipeline from scratch for raw speed."),
+            ("d", "Add extra capacity to every stage at once and see if latency drops."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1041,13 +1101,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
+            ("a", "Rerank a smaller candidate set to cut rerank time while staying above the bar."),
+            ("b", "Remove the reranker entirely so the endpoint meets its latency SLA again."),
             (
-                "a",
-                "Rerank a smaller candidate set (lower first-stage top-k) to cut rerank time while holding quality above the bar.",
+                "c",
+                "Raise the latency SLA threshold so the current rerank path is recorded as passing.",
             ),
-            ("b", "Remove the reranker entirely to meet the SLA."),
-            ("c", "Raise the SLA so the current latency passes."),
-            ("d", "Rerank an even larger candidate set for maximum quality."),
+            (
+                "d",
+                "Rerank an even larger first-stage candidate set to push quality as high as possible.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1076,9 +1139,9 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Accept the request, return a job handle, and process it asynchronously."),
-            ("b", "Raise the client timeout so it waits longer."),
-            ("c", "Make the job run faster by lowering temperature."),
-            ("d", "Retry the whole request if it times out."),
+            ("b", "Raise the client-side timeout so the caller simply waits longer for the job."),
+            ("c", "Lower the sampling temperature to make the long generation job run faster."),
+            ("d", "Retry the whole blocking request from the start whenever it times out."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1106,10 +1169,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Reuse a pooled client/connection across requests."),
-            ("b", "Create two clients per request for redundancy."),
-            ("c", "Add a sleep between requests to pace them."),
-            ("d", "Increase output tokens to amortize setup."),
+            ("a", "Reuse a pooled client and connection across requests."),
+            ("b", "Create two fresh clients per request to add connection redundancy."),
+            ("c", "Add a short sleep between requests to pace the connection setup."),
+            ("d", "Increase the output-token limit to amortize the per-call setup cost."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1140,11 +1203,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Use a semantic cache with a high similarity threshold and validation before serving a cached answer.",
+                "Use a semantic cache with a high similarity threshold and validation before serving.",
             ),
-            ("b", "Cache by exact string only, so paraphrases always miss."),
-            ("c", "Serve the nearest cached answer regardless of similarity."),
-            ("d", "Disable caching because paraphrases differ."),
+            (
+                "b",
+                "Cache strictly by exact string match, so paraphrased duplicates always miss the cache.",
+            ),
+            (
+                "c",
+                "Serve the single nearest cached answer regardless of how similar it actually is.",
+            ),
+            (
+                "d",
+                "Disable caching for this path entirely because paraphrases are worded differently.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1177,9 +1249,18 @@ QUESTIONS: list[dict[str, Any]] = [
                 "a",
                 "Enable dynamic request batching so concurrent requests share accelerator passes.",
             ),
-            ("b", "Force strictly one request at a time for predictability."),
-            ("c", "Shrink the model to a tenth of its size regardless of quality."),
-            ("d", "Add a fixed delay before each inference."),
+            (
+                "b",
+                "Force the endpoint to handle strictly one request at a time for predictability.",
+            ),
+            (
+                "c",
+                "Shrink the served model to a tenth of its size regardless of the quality impact.",
+            ),
+            (
+                "d",
+                "Add a fixed delay before each inference call to smooth out the request arrivals.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1207,13 +1288,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            (
-                "a",
-                "Overlap independent stages (e.g., prefetch/parallelize) so idle time is reused.",
-            ),
-            ("b", "Serialize the stages more strictly to avoid contention."),
-            ("c", "Raise temperature to speed generation."),
-            ("d", "Increase top-k so retrieval returns more and generation waits longer."),
+            ("a", "Overlap the independent stages by prefetching so idle wait time is reused."),
+            ("b", "Serialize the pipeline stages even more strictly to avoid resource contention."),
+            ("c", "Raise the sampling temperature to try to speed up the generation stage."),
+            ("d", "Increase retrieval top-k so more passages return and generation waits longer."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1245,10 +1323,13 @@ QUESTIONS: list[dict[str, Any]] = [
             ("a", "Adopt quantization since it cuts latency while holding accuracy above the bar."),
             (
                 "b",
-                "Reject quantization because any accuracy change is unacceptable even above the bar.",
+                "Reject quantization because any accuracy change at all is unacceptable to ship.",
             ),
-            ("c", "Quantize only if latency is already acceptable."),
-            ("d", "Choose based on which option has the larger context window."),
+            (
+                "c",
+                "Apply quantization only on paths where latency is already within target anyway.",
+            ),
+            ("d", "Decide purely on which candidate option advertises the larger context window."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1276,13 +1357,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            (
-                "a",
-                "Set per-stage timeouts/deadline budgets with a defined fallback when a stage exceeds its slice.",
-            ),
-            ("b", "Remove all timeouts so no stage is interrupted."),
-            ("c", "Give the slow stage the entire budget and skip the others."),
-            ("d", "Retry the slow stage until it finishes, however long it takes."),
+            ("a", "Set per-stage deadline budgets with a defined fallback when a stage overruns."),
+            ("b", "Remove all per-stage timeouts so no stage is ever interrupted mid-request."),
+            ("c", "Give the slow stage the entire latency budget and skip the remaining stages."),
+            ("d", "Retry the slow stage repeatedly until it finishes, however long that takes."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1311,13 +1389,19 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "easy",
         "question_format": "multiple_choice",
         "options": [
+            ("a", "CloudWatch metrics and alarms on latency, error rate, throughput, and cost."),
             (
-                "a",
-                "CloudWatch metrics and alarms on latency, error rate, throughput, and cost per request.",
+                "b",
+                "A monthly manual review of a small sample of logged requests and their replies.",
             ),
-            ("b", "A monthly manual review of a few sampled requests."),
-            ("c", "A single counter of total requests with no errors or latency."),
-            ("d", "Nothing; wait for user reports."),
+            (
+                "c",
+                "A single CloudWatch counter of total requests with no error or latency breakdown.",
+            ),
+            (
+                "d",
+                "Nothing automated for now; keep waiting on user reports to surface each outage.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1344,13 +1428,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
+            ("a", "Propagate a correlation/trace ID across every component with X-Ray and log it."),
             (
-                "a",
-                "Propagate a correlation/trace ID across every component (e.g., with X-Ray) and log it.",
+                "b",
+                "Raise the log level everywhere and read far more lines during each investigation.",
             ),
-            ("b", "Raise the log level everywhere and read more lines."),
-            ("c", "Store each component's logs in separate systems with no shared key."),
-            ("d", "Log full prompts and payloads including secrets for completeness."),
+            (
+                "c",
+                "Keep each component's logs in a separate system with no shared correlation key.",
+            ),
+            ("d", "Log full prompts and payloads including secrets so every detail is available."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1380,11 +1467,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Log sanitized metrics, events, and correlation IDs; redact prompts, responses, PII, and secrets.",
+                "Log sanitized metrics and correlation IDs; redact prompts, responses, and secrets.",
             ),
-            ("b", "Log everything verbatim for maximum debuggability."),
-            ("c", "Log full content but restrict who can read it."),
-            ("d", "Disable logging entirely to avoid any risk."),
+            (
+                "b",
+                "Log every prompt and response verbatim so debugging has maximum detail available.",
+            ),
+            (
+                "c",
+                "Log the full prompt and response content but restrict which engineers can read it.",
+            ),
+            (
+                "d",
+                "Disable application logging entirely so no sensitive content can ever be stored.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1412,10 +1508,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Roll back to the last known-good version, then investigate."),
-            ("b", "Leave the bad version live and debug in production."),
-            ("c", "Silence the alarms so paging stops."),
-            ("d", "Wait to see whether it resolves on its own."),
+            ("a", "Roll back to the last known-good version, then investigate the regression."),
+            ("b", "Leave the broken new version live and debug it directly in production traffic."),
+            ("c", "Silence the paging alarms so the on-call team stops getting interrupted."),
+            ("d", "Wait and watch for a while to see whether the spike resolves on its own."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1444,11 +1540,14 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Correlate the alarm to traces to find which stage is slow, then remediate that.",
+                "Correlate the alarm to traces to find the slow stage, then remediate that stage.",
             ),
-            ("b", "Double instances now and see if the alarm clears."),
-            ("c", "Delete the alarm because it is noisy."),
-            ("d", "Lower the latency threshold so the alarm stops firing."),
+            (
+                "b",
+                "Double the instance count now and watch to see whether the alarm clears on its own.",
+            ),
+            ("c", "Delete the latency alarm because it is firing intermittently and seems noisy."),
+            ("d", "Lower the alarm's latency threshold so it stops firing during these intervals."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1478,11 +1577,17 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Ongoing output-quality/drift monitoring (e.g., sampled evaluation against a golden set).",
+                "Ongoing output-quality drift monitoring via sampled evaluation on a golden set.",
             ),
-            ("b", "A higher-resolution CPU utilization graph."),
-            ("c", "More frequent latency percentile sampling."),
-            ("d", "A larger log retention window."),
+            (
+                "b",
+                "A higher-resolution CPU utilization graph on the inference instances over time.",
+            ),
+            ("c", "More frequent sampling of the latency percentiles reported for each endpoint."),
+            (
+                "d",
+                "A larger CloudWatch log retention window to keep more history around for review.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1510,10 +1615,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Emit a cost-per-request metric (e.g., from token usage) and alarm on it."),
-            ("b", "Alarm on invocation count and assume cost tracks it."),
-            ("c", "Check the monthly bill and react afterward."),
-            ("d", "Alarm on CPU utilization as a cost proxy."),
+            ("a", "Emit a cost-per-request metric from token usage and alarm on that metric."),
+            ("b", "Alarm on the invocation count and assume per-request cost tracks it closely."),
+            ("c", "Check the monthly AWS bill after the fact and react once the overage shows up."),
+            ("d", "Alarm on instance CPU utilization and use it as a proxy for token-based cost."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1573,10 +1678,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Set thresholds from observed baselines so alarms fire on real anomalies."),
-            ("b", "Delete the alarm since it is noisy."),
-            ("c", "Raise the threshold so high it essentially never fires."),
-            ("d", "Keep the alarm and tell the team to ignore it during peaks."),
+            ("a", "Set the threshold from observed baselines so it fires on real anomalies."),
+            ("b", "Delete the noisy latency alarm so it stops interrupting the on-call rotation."),
+            ("c", "Raise the threshold so high that the alarm effectively never fires again."),
+            ("d", "Keep the alarm as-is and tell the team to ignore it during busy peak hours."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1606,11 +1711,17 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Run periodic synthetic canary requests with known expected answers and alarm on failures.",
+                "Run periodic synthetic canary requests with known answers and alarm on failures.",
             ),
-            ("b", "Rely only on real user traffic, which is sparse at night."),
-            ("c", "Check the endpoint manually once a day."),
-            ("d", "Assume health as long as the instance is running."),
+            (
+                "b",
+                "Rely only on real user traffic for signals, which is very sparse during the night.",
+            ),
+            ("c", "Check the endpoint manually once a day and treat it as healthy between checks."),
+            (
+                "d",
+                "Assume the endpoint is healthy as long as the underlying instance stays running.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1638,13 +1749,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
+            ("a", "Instrument per-tool spans with sanitized inputs, latency, and error status."),
             (
-                "a",
-                "Instrument per-tool spans with sanitized inputs/outputs, latency, and error status.",
+                "b",
+                "Log only the agent's final answer and infer tool health from the output quality.",
             ),
-            ("b", "Log only the agent's final answer."),
-            ("c", "Increase the model temperature to vary behavior."),
-            ("d", "Remove tools until the problem disappears."),
+            (
+                "c",
+                "Increase the model's sampling temperature to vary the agent's behavior per run.",
+            ),
+            ("d", "Remove tools one by one from the agent until the bad results stop appearing."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1676,9 +1790,18 @@ QUESTIONS: list[dict[str, Any]] = [
                 "a",
                 "Attach a runbook with diagnosis and remediation steps to each actionable alarm.",
             ),
-            ("b", "Add many more alarms so nothing is missed."),
-            ("c", "Route every alarm to every engineer."),
-            ("d", "Lower all thresholds to catch issues earlier."),
+            (
+                "b",
+                "Add many more alarms across every metric so no possible condition is ever missed.",
+            ),
+            (
+                "c",
+                "Route every alarm to every engineer on the team so someone always responds fast.",
+            ),
+            (
+                "d",
+                "Lower all alarm thresholds so issues are caught much earlier in their lifecycle.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1707,11 +1830,14 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "The symptoms, evidence/traces, root cause, remediation, and how recovery was verified.",
+                "Symptoms, evidence/traces, root cause, remediation, and how recovery was verified.",
             ),
-            ("b", "Only the final fix that was applied."),
-            ("c", "Just the timestamp the alarm cleared."),
-            ("d", "A note that it is resolved, with no detail."),
+            ("b", "Only the final fix that was applied, since that is what resolved the incident."),
+            (
+                "c",
+                "Just the timestamp at which the triggering alarm finally cleared for the record.",
+            ),
+            ("d", "A short note stating that the incident is resolved, with no supporting detail."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1738,10 +1864,13 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Sample a fraction of normal traces but keep all error/anomaly traces."),
-            ("b", "Trace every single request regardless of overhead."),
-            ("c", "Turn tracing off entirely to remove overhead."),
-            ("d", "Trace only successful requests to keep dashboards clean."),
+            ("a", "Sample a fraction of normal traces but keep every error and anomaly trace."),
+            (
+                "b",
+                "Trace every single request regardless of the cost and overhead it adds at scale.",
+            ),
+            ("c", "Turn tracing off entirely so the overhead and extra cost disappear completely."),
+            ("d", "Trace only the successful requests so the dashboards stay clean and readable."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1769,10 +1898,13 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "hard",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Define SLOs with an error budget and gate feature work on remaining budget."),
-            ("b", "Track only raw uptime percentage with no target."),
-            ("c", "Decide reliability priorities by gut feel each sprint."),
-            ("d", "Alarm on every metric and treat all as equally urgent."),
+            (
+                "a",
+                "Define SLOs with an error budget and gate feature work on the remaining budget.",
+            ),
+            ("b", "Track only a raw uptime percentage with no target or budget attached to it."),
+            ("c", "Decide reliability priorities by team gut feel at the start of each sprint."),
+            ("d", "Alarm on every available metric and treat all of them as equally urgent."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1799,10 +1931,10 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Track guardrail block rate over time and alarm on sudden increases."),
-            ("b", "Track only total request volume."),
-            ("c", "Track CPU utilization of the guardrail service."),
-            ("d", "Track the number of guardrail policies configured."),
+            ("a", "Track the guardrail block rate over time and alarm on sudden increases."),
+            ("b", "Track only total request volume and infer blocking from any dips in it."),
+            ("c", "Track the CPU utilization of the guardrail service as a proxy for blocking."),
+            ("d", "Track the number of guardrail policies configured on the service over time."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1830,9 +1962,12 @@ QUESTIONS: list[dict[str, Any]] = [
         "question_format": "multiple_choice",
         "options": [
             ("a", "Emit structured logs with consistent fields (correlation id, stage, outcome)."),
-            ("b", "Write longer free-text messages."),
-            ("c", "Log less so there is less to search."),
-            ("d", "Store logs as images for readability."),
+            (
+                "b",
+                "Write longer, more descriptive free-text log messages for each request handled.",
+            ),
+            ("c", "Log considerably less overall so there is a smaller body of text to search."),
+            ("d", "Store log entries as rendered images so they are easier for humans to read."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1861,11 +1996,20 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Periodically evaluate retrieval relevance/recall on a labeled probe set and alarm on drops.",
+                "Evaluate retrieval relevance and recall on a labeled probe set and alarm on drops.",
             ),
-            ("b", "Monitor only generation latency."),
-            ("c", "Monitor the vector store's disk usage."),
-            ("d", "Monitor the number of documents ingested."),
+            (
+                "b",
+                "Monitor only the generation stage latency and treat it as the retrieval signal.",
+            ),
+            (
+                "c",
+                "Monitor the vector store's disk usage and alarm when the index grows too large.",
+            ),
+            (
+                "d",
+                "Monitor the number of documents ingested each run as the retrieval health metric.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1894,11 +2038,11 @@ QUESTIONS: list[dict[str, Any]] = [
         "options": [
             (
                 "a",
-                "Add outcome metrics such as task-completion or deflection rate alongside infra metrics.",
+                "Add outcome metrics such as task-completion or deflection rate to the dashboard.",
             ),
-            ("b", "Add more CPU and memory graphs."),
-            ("c", "Add the count of deployed Lambda functions."),
-            ("d", "Add the number of lines of code shipped."),
+            ("b", "Add more CPU and memory utilization graphs for the inference fleet over time."),
+            ("c", "Add a count of the Lambda functions deployed behind the GenAI feature stack."),
+            ("d", "Add the number of lines of application code shipped in each weekly release."),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
@@ -1925,10 +2069,16 @@ QUESTIONS: list[dict[str, Any]] = [
         "difficulty": "medium",
         "question_format": "multiple_choice",
         "options": [
-            ("a", "Real-time token-usage/cost-rate metrics with an anomaly alarm."),
-            ("b", "A quarterly cost review meeting."),
-            ("c", "A static monthly budget with no alerting."),
-            ("d", "Manual spot checks of the console when someone remembers."),
+            ("a", "Real-time token-usage and cost-rate metrics with an anomaly alarm on spikes."),
+            (
+                "b",
+                "A quarterly cost review meeting where the team walks through recent spend trends.",
+            ),
+            ("c", "A static monthly budget figure with no alerting attached to live usage at all."),
+            (
+                "d",
+                "Manual spot checks of the billing console whenever someone happens to remember.",
+            ),
         ],
         "correct_option_ids": ["a"],
         "explanation": (
