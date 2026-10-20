@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import timedelta
 
 from study_core.common import domain_of, stable_shuffle
@@ -149,14 +149,19 @@ class ScoredSessionService:
         return capacity, excluded
 
     def _question_domains(self) -> dict[str, set[int]]:
-        # Scored sessions use only authored questions — those with per-option
-        # rationales. Placeholder scaffolding (no rationales) is excluded so a
-        # scored session is always real content.
+        # Scored sessions use only authored questions. A question is authored if
+        # it carries real grading material for its type: per-option rationales
+        # (multiple choice / response), an ordered key (ordering), or a matching
+        # key (matching). Placeholder scaffolding is excluded.
         rows = self._conn.execute(
             "SELECT q.question_id AS qid, qo.objective_id AS oid "
             "FROM questions q JOIN question_objectives qo ON qo.question_id = q.question_id "
-            "WHERE q.review_status = 'reviewed' "
-            "AND EXISTS (SELECT 1 FROM option_rationales r WHERE r.question_id = q.question_id)"
+            "WHERE q.review_status = 'reviewed' AND ("
+            "  EXISTS (SELECT 1 FROM option_rationales r WHERE r.question_id = q.question_id)"
+            "  OR EXISTS (SELECT 1 FROM match_answer_keys k WHERE k.question_id = q.question_id)"
+            "  OR EXISTS (SELECT 1 FROM answer_material a WHERE a.question_id = q.question_id "
+            "             AND a.correct_sequence NOT IN ('', '[]'))"
+            ")"
         ).fetchall()
         result: dict[str, set[int]] = {}
         for row in rows:
@@ -179,15 +184,47 @@ class ScoredSessionService:
         )
         return qs
 
+    def _question_formats(self) -> dict[str, str]:
+        rows = self._conn.execute("SELECT question_id, question_format FROM questions").fetchall()
+        return {str(r["question_id"]): str(r["question_format"]) for r in rows}
+
     def _pick_items(self, counts: dict[int, int], *, exclude: set[str]) -> list[tuple[bool, str]]:
+        """Pick scored items per domain, guaranteeing type coverage per domain.
+
+        Within each domain's allotment, first seed one question of each question
+        format the domain's pool actually contains (so every session includes
+        some of each available type from every domain), then fill the remaining
+        seats at random. If a domain's allotment is smaller than the number of
+        available formats, as many distinct formats as fit are seeded.
+        """
         picked: list[tuple[bool, str]] = []
         used = set(exclude)
+        formats = self._question_formats()
         for domain_id in sorted(counts):
             pool = [q for q in self._questions_in_domain(domain_id) if q not in used]
             take = min(counts[domain_id], len(pool))
-            for _ in range(take):
-                idx = self._random.choose_index(len(pool))
-                qid = pool.pop(idx)
+            if take <= 0:
+                continue
+            chosen: list[str] = []
+
+            # Phase 1: seed one of each format present in this domain's pool.
+            by_format: dict[str, list[str]] = {}
+            for qid in pool:
+                by_format.setdefault(formats.get(qid, "multiple_choice"), []).append(qid)
+            for fmt in sorted(by_format):
+                if len(chosen) >= take:
+                    break
+                bucket = by_format[fmt]
+                qid = bucket[self._random.choose_index(len(bucket))]
+                chosen.append(qid)
+
+            # Phase 2: fill remaining seats at random from the rest of the pool.
+            remaining = [q for q in pool if q not in chosen]
+            while len(chosen) < take and remaining:
+                idx = self._random.choose_index(len(remaining))
+                chosen.append(remaining.pop(idx))
+
+            for qid in chosen:
                 used.add(qid)
                 picked.append((True, qid))
         return picked
@@ -257,6 +294,7 @@ class ScoredSessionService:
         # correct answer is not positionally predictable, while re-rendering the
         # same item keeps a stable order. Grading uses option IDs, not position.
         options = tuple(stable_shuffle(base_options, seed_key=f"{session_id}:{question_id}"))
+        fmt = str(q["question_format"])
         answer = self._conn.execute(
             "SELECT selected_option_ids, answered FROM scored_answers "
             "WHERE session_id = ? AND question_id = ?",
@@ -264,6 +302,31 @@ class ScoredSessionService:
         ).fetchone()
         selected = tuple(json.loads(answer["selected_option_ids"])) if answer else ()
         answered = bool(answer["answered"]) if answer else False
+
+        # Matching questions carry prompts and selectable responses instead of
+        # (or in addition to) plain options; never project the answer key.
+        match_prompts: tuple[QuestionOption, ...] = ()
+        match_responses: tuple[QuestionOption, ...] = ()
+        selected_pairs: tuple[tuple[str, str], ...] = ()
+        if fmt == "matching":
+            match_prompts = tuple(
+                QuestionOption(option_id=str(r["prompt_id"]), text=str(r["text"]))
+                for r in self._conn.execute(
+                    "SELECT prompt_id, text FROM match_prompts WHERE question_id = ? "
+                    "ORDER BY display_order",
+                    (question_id,),
+                ).fetchall()
+            )
+            match_responses = tuple(
+                QuestionOption(option_id=str(r["response_id"]), text=str(r["text"]))
+                for r in self._conn.execute(
+                    "SELECT response_id, text FROM match_responses WHERE question_id = ? "
+                    "ORDER BY display_order",
+                    (question_id,),
+                ).fetchall()
+            )
+            selected_pairs = tuple(self._selected_pairs(session_id, question_id).items())
+            answered = bool(selected_pairs)
         _ = session
         return ScoredItemView(
             session_id=session_id,
@@ -271,10 +334,13 @@ class ScoredSessionService:
             total=total,
             question_id=question_id,
             prompt=str(q["prompt"]),
-            question_format=str(q["question_format"]),
+            question_format=fmt,
             options=options,
             selected_option_ids=selected,
             answered=answered,
+            match_prompts=match_prompts,
+            match_responses=match_responses,
+            selected_pairs=selected_pairs,
         )
 
     def answer(
@@ -290,6 +356,9 @@ class ScoredSessionService:
             raise ScoredSessionError("session is not accepting answers")
         now = self._clock.now_utc().isoformat()
         answered = len(selected_option_ids) > 0
+        # Preserve the given order: multiple-response grading compares sets, but
+        # ordering questions require the submitted sequence to survive verbatim.
+        payload = json.dumps(list(selected_option_ids))
         with immediate_transaction(self._conn):
             self._conn.execute(
                 "INSERT INTO scored_answers (session_id, question_id, selected_option_ids, "
@@ -299,14 +368,38 @@ class ScoredSessionService:
                 (
                     session_id,
                     question_id,
-                    json.dumps(sorted(selected_option_ids)),
+                    payload,
                     1 if answered else 0,
                     now,
-                    json.dumps(sorted(selected_option_ids)),
+                    payload,
                     1 if answered else 0,
                     now,
                 ),
             )
+
+    def answer_match(
+        self,
+        *,
+        session_id: str,
+        question_id: str,
+        pairs: Mapping[str, str],
+    ) -> None:
+        """Record a matching question's prompt->response pairing for a session."""
+        session = self._session_row(session_id)
+        if str(session["state"]) != "in_progress":
+            raise ScoredSessionError("session is not accepting answers")
+        now = self._clock.now_utc().isoformat()
+        with immediate_transaction(self._conn):
+            self._conn.execute(
+                "DELETE FROM scored_match_answers WHERE session_id = ? AND question_id = ?",
+                (session_id, question_id),
+            )
+            for prompt_id, response_id in pairs.items():
+                self._conn.execute(
+                    "INSERT INTO scored_match_answers (session_id, question_id, prompt_id, "
+                    "response_id, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (session_id, question_id, str(prompt_id), str(response_id), now),
+                )
 
     # -- submit --------------------------------------------------------------
 
@@ -344,9 +437,31 @@ class ScoredSessionService:
             qid = str(item["question_id"])
             domain = int(item["domain_id"])
             per_total[domain] = per_total.get(domain, 0) + 1
-            correct_ids = self._correct_option_ids(qid)
-            selected, answered = answers.get(qid, ([], False))
-            outcome = grade_item(selected, correct_ids, answered=answered)
+            fmt = self._question_format(qid)
+            if fmt == "matching":
+                selected_pairs = self._selected_pairs(session_id, qid)
+                answered = bool(selected_pairs)
+                outcome = grade_item(
+                    [],
+                    [],
+                    answered=answered,
+                    question_format=fmt,
+                    selected_pairs=selected_pairs,
+                    correct_pairs=self._correct_pairs(qid),
+                )
+            elif fmt == "ordering":
+                selected, answered = answers.get(qid, ([], False))
+                outcome = grade_item(
+                    [],
+                    [],
+                    answered=answered,
+                    question_format=fmt,
+                    selected_sequence=selected,
+                    correct_sequence=self._correct_sequence(qid),
+                )
+            else:
+                selected, answered = answers.get(qid, ([], False))
+                outcome = grade_item(selected, self._correct_option_ids(qid), answered=answered)
             if outcome == GradeOutcome.CORRECT:
                 per_correct[domain] = per_correct.get(domain, 0) + 1
             else:
@@ -432,6 +547,7 @@ class ScoredSessionService:
             self._conn.execute("DELETE FROM scored_misses WHERE session_id = ?", (sid,))
             self._conn.execute("DELETE FROM scored_results WHERE session_id = ?", (sid,))
             self._conn.execute("DELETE FROM scored_answers WHERE session_id = ?", (sid,))
+            self._conn.execute("DELETE FROM scored_match_answers WHERE session_id = ?", (sid,))
             self._conn.execute("DELETE FROM scored_session_items WHERE session_id = ?", (sid,))
             self._conn.execute("DELETE FROM scored_sessions WHERE session_id = ?", (sid,))
 
@@ -528,6 +644,37 @@ class ScoredSessionService:
             (question_id,),
         ).fetchone()
         return list(json.loads(row["correct_option_ids"])) if row else []
+
+    def _question_format(self, question_id: str) -> str:
+        row = self._conn.execute(
+            "SELECT question_format FROM questions WHERE question_id = ?",
+            (question_id,),
+        ).fetchone()
+        return str(row["question_format"]) if row else "multiple_choice"
+
+    def _correct_sequence(self, question_id: str) -> list[str]:
+        row = self._conn.execute(
+            "SELECT correct_sequence FROM answer_material WHERE question_id = ?",
+            (question_id,),
+        ).fetchone()
+        if row is None or not row["correct_sequence"]:
+            return []
+        return list(json.loads(row["correct_sequence"]))
+
+    def _correct_pairs(self, question_id: str) -> dict[str, str]:
+        rows = self._conn.execute(
+            "SELECT prompt_id, response_id FROM match_answer_keys WHERE question_id = ?",
+            (question_id,),
+        ).fetchall()
+        return {str(r["prompt_id"]): str(r["response_id"]) for r in rows}
+
+    def _selected_pairs(self, session_id: str, question_id: str) -> dict[str, str]:
+        rows = self._conn.execute(
+            "SELECT prompt_id, response_id FROM scored_match_answers "
+            "WHERE session_id = ? AND question_id = ?",
+            (session_id, question_id),
+        ).fetchall()
+        return {str(r["prompt_id"]): str(r["response_id"]) for r in rows}
 
     def _load_result(self, session_id: str) -> ScoredResult:
         row = self._conn.execute(

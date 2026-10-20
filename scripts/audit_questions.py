@@ -32,10 +32,60 @@ _LONGEST_SHARE_MAX = 0.40
 _DISTRACTOR_REUSE_MAX = 3
 _SHORT_OPTION_CHARS = 24
 
+# Out-of-scope AWS services per the official exam guide appendix. A keyed-correct
+# answer or teaching explanation must never rely on one of these. Matched as
+# word-boundary substrings against option/explanation text.
+_OUT_OF_SCOPE_SERVICES: tuple[str, ...] = (
+    "Amazon MQ",
+    "AWS Clean Rooms",
+    "AWS Data Exchange",
+    "Amazon DataZone",
+    "Amazon FinSpace",
+    "Amazon Managed Blockchain",
+    "Alexa for Business",
+    "Amazon Chime",
+    "AWS Wickr",
+    "Amazon WorkDocs",
+    "Amazon WorkMail",
+    "AWS Budgets",
+    "AWS Cost and Usage Report",
+    "AWS Savings Plans",
+    "AWS Batch",
+    "Amazon EC2 Image Builder",
+    "AWS Elastic Beanstalk",
+    "Amazon Lightsail",
+    "AWS Serverless Application Repository",
+    "AWS App2Container",
+    "AWS Copilot",
+    "Amazon SES",
+)
+
+# Modules that hold authored multiple-choice/response questions (the ones with
+# an options + correct_option_ids shape the service check can inspect).
+_QUESTION_MODULES = tuple(f"content.domain{d}_questions" for d in _DOMAINS)
+
 
 def _load(domain: int) -> list[dict[str, Any]]:
     module = importlib.import_module(f"content.domain{domain}_questions")
     return list(module.QUESTIONS)
+
+
+def _out_of_scope_hits() -> list[tuple[str, str]]:
+    """Return (question_id, service) where a correct answer/explanation uses an
+    out-of-scope service. Only the keyed-correct options and the explanation are
+    checked; a plausible out-of-scope *distractor* is acceptable."""
+    hits: list[tuple[str, str]] = []
+    for module_name in _QUESTION_MODULES:
+        module = importlib.import_module(module_name)
+        for q in module.QUESTIONS:
+            correct = set(q.get("correct_option_ids", ()))
+            texts = [t for oid, t in q.get("options", ()) if oid in correct]
+            texts.append(str(q.get("explanation", "")))
+            blob = " ".join(texts)
+            for svc in _OUT_OF_SCOPE_SERVICES:
+                if svc.lower() in blob.lower():
+                    hits.append((str(q["question_id"]), svc))
+    return hits
 
 
 def _single_answer(questions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -106,6 +156,15 @@ def main(argv: list[str]) -> int:
             print(f"  {count}x  {text[:66]}{marker}")
     if overused:
         violations.append(f"{len(overused)} distractor(s) reused > {_DISTRACTOR_REUSE_MAX} times")
+
+    hits = _out_of_scope_hits()
+    print("\nOut-of-scope services in a keyed answer or explanation:")
+    if hits:
+        for qid, svc in hits:
+            print(f"  {qid}: {svc}  <-- OVER")
+        violations.append(f"{len(hits)} keyed answer(s) reference an out-of-scope service")
+    else:
+        print("  none")
 
     print(f"\nTotal questions: {len(all_questions)}")
     if check:

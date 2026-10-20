@@ -175,6 +175,11 @@ class ScoredItemView(StrictModel):
     options: tuple[QuestionOption, ...]
     selected_option_ids: tuple[str, ...]
     answered: bool
+    # Matching questions only: left-hand prompts, selectable responses, and the
+    # learner's current prompt->response pairing. Empty for other formats.
+    match_prompts: tuple[QuestionOption, ...] = ()
+    match_responses: tuple[QuestionOption, ...] = ()
+    selected_pairs: tuple[tuple[str, str], ...] = ()
 
 
 class DomainResult(StrictModel):

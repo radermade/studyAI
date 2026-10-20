@@ -215,8 +215,11 @@ class StudyService:
                 "SELECT question_id FROM session_items WHERE session_id = ?", (session_id,)
             ).fetchall()
         }
+        # Grill serves single/multi-choice only; ordering and matching are
+        # exercised in Scored Session, where their dedicated UI and grading live.
         candidates = self._conn.execute(
             "SELECT question_id FROM questions WHERE review_status = 'reviewed' "
+            "AND question_format IN ('multiple_choice', 'multiple_response') "
             "ORDER BY question_id ASC"
         ).fetchall()
         eligible = [

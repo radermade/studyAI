@@ -19,14 +19,17 @@ from content.domain3_questions import QUESTIONS as DOMAIN3_QUESTIONS
 from content.domain4_questions import QUESTIONS as DOMAIN4_QUESTIONS
 from content.domain5_questions import QUESTIONS as DOMAIN5_QUESTIONS
 from content.labs import build_authored_labs, build_lab_curriculum_items
+from content.ordering_matching import ORDERING_MATCHING_QUESTIONS
 
-# All authored (non-placeholder) scenario questions across completed domains.
+# All authored (non-placeholder) scenario questions across completed domains,
+# including the ordering/matching banks.
 _AUTHORED_QUESTIONS: list[dict[str, Any]] = [
     *DOMAIN1_QUESTIONS,
     *DOMAIN2_QUESTIONS,
     *DOMAIN3_QUESTIONS,
     *DOMAIN4_QUESTIONS,
     *DOMAIN5_QUESTIONS,
+    *ORDERING_MATCHING_QUESTIONS,
 ]
 
 # Objectives with genuine authored coverage: an objective counts as authored

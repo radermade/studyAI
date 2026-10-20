@@ -17,18 +17,54 @@ def _correct_options(scored: ScoredSessionService, question_id: str) -> list[str
     return [str(o) for o in json.loads(row["correct_option_ids"])]
 
 
+def _correct_sequence(scored: ScoredSessionService, question_id: str) -> list[str]:
+    import json
+
+    row = scored._conn.execute(
+        "SELECT correct_sequence FROM answer_material WHERE question_id = ?",
+        (question_id,),
+    ).fetchone()
+    return [str(o) for o in json.loads(row["correct_sequence"])] if row["correct_sequence"] else []
+
+
+def _correct_pairs(scored: ScoredSessionService, question_id: str) -> dict[str, str]:
+    rows = scored._conn.execute(
+        "SELECT prompt_id, response_id FROM match_answer_keys WHERE question_id = ?",
+        (question_id,),
+    ).fetchall()
+    return {str(r["prompt_id"]): str(r["response_id"]) for r in rows}
+
+
 def _complete_session(scored: ScoredSessionService, *, correct: bool) -> str:
     view = scored.start(learner_id="L1")
     for pos in range(view.item_count):
         item = scored.current_item(session_id=view.session_id, position=pos)
+        fmt = item.question_format
+        if fmt == "matching":
+            pairs = _correct_pairs(scored, item.question_id)
+            if not correct and pairs:
+                # Flip one pair to a different response to force a miss.
+                responses = [r.option_id for r in item.match_responses]
+                first = next(iter(pairs))
+                alt = next((r for r in responses if r != pairs[first]), pairs[first])
+                pairs = {**pairs, first: alt}
+            scored.answer_match(
+                session_id=view.session_id, question_id=item.question_id, pairs=pairs
+            )
+            continue
+        if fmt == "ordering":
+            seq = _correct_sequence(scored, item.question_id)
+            selected = seq if correct else list(reversed(seq))
+            scored.answer(
+                session_id=view.session_id,
+                question_id=item.question_id,
+                selected_option_ids=selected,
+            )
+            continue
         right = _correct_options(scored, item.question_id)
         if correct:
-            # Select exactly the correct set (handles multiple-response too).
             selected = right
         else:
-            # Produce a set that is not equal to the correct set: pick a single
-            # option that is not fully correct (an incorrect one if available,
-            # else a strict subset of a multi-answer key).
             wrong = next((o.option_id for o in item.options if o.option_id not in right), None)
             selected = [wrong] if wrong is not None else right[:1]
         scored.answer(
@@ -48,7 +84,13 @@ def test_item_view_hides_answer_material(scored: ScoredSessionService) -> None:
     assert "correct_option_ids" not in dumped
     assert "explanation" not in dumped
     assert "objective_ids" not in dumped
-    assert len(item.options) >= 2
+    assert "correct_sequence" not in dumped
+    assert "match_key" not in dumped
+    # An option-based item exposes its options; a matching item exposes prompts
+    # and responses. Either way the item is renderable with no answer material.
+    assert len(item.options) >= 2 or (
+        len(item.match_prompts) >= 2 and len(item.match_responses) >= 2
+    )
 
 
 def test_feedback_withheld_until_submit(scored: ScoredSessionService) -> None:

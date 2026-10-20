@@ -64,6 +64,83 @@ def test_grade_unanswered_is_incorrect() -> None:
     assert grade_item([], ["a"], answered=False) == GradeOutcome.INCORRECT
 
 
+def test_grade_ordering_exact_sequence() -> None:
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=True,
+            question_format="ordering",
+            selected_sequence=["b", "a", "c"],
+            correct_sequence=["b", "a", "c"],
+        )
+        == GradeOutcome.CORRECT
+    )
+    # Right members, wrong order -> incorrect (all-or-nothing).
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=True,
+            question_format="ordering",
+            selected_sequence=["a", "b", "c"],
+            correct_sequence=["b", "a", "c"],
+        )
+        == GradeOutcome.INCORRECT
+    )
+    # Unanswered ordering is incorrect.
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=False,
+            question_format="ordering",
+            selected_sequence=[],
+            correct_sequence=["b", "a", "c"],
+        )
+        == GradeOutcome.INCORRECT
+    )
+
+
+def test_grade_matching_all_pairs() -> None:
+    key = {"p1": "r2", "p2": "r1", "p3": "r2"}
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=True,
+            question_format="matching",
+            selected_pairs={"p1": "r2", "p2": "r1", "p3": "r2"},
+            correct_pairs=key,
+        )
+        == GradeOutcome.CORRECT
+    )
+    # One wrong pair -> incorrect.
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=True,
+            question_format="matching",
+            selected_pairs={"p1": "r2", "p2": "r2", "p3": "r2"},
+            correct_pairs=key,
+        )
+        == GradeOutcome.INCORRECT
+    )
+    # Missing a pair -> incorrect.
+    assert (
+        grade_item(
+            [],
+            [],
+            answered=True,
+            question_format="matching",
+            selected_pairs={"p1": "r2", "p2": "r1"},
+            correct_pairs=key,
+        )
+        == GradeOutcome.INCORRECT
+    )
+
+
 def test_scaled_score_endpoints_and_boundary() -> None:
     assert scaled_score(0, 65) == 100
     assert scaled_score(65, 65) == 1000

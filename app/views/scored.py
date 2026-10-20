@@ -7,11 +7,13 @@ score readout and a review of every missed item. Supports reset and history.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 
 import streamlit as st
 from study_core.bootstrap import StudyRuntime
 from study_core.common import ALL_TASK_IDS
 from study_core.service import ContentGapError
+from study_core.study_models import ScoredItemView
 
 from app.components import empty_state, error_state, status_badge
 from app.theme import StatusTone, score_banner, score_readout
@@ -79,53 +81,31 @@ def _render_session(runtime: StudyRuntime, learner: str, session_id: str) -> Non
     st.progress((position + 1) / item.total, text=f"Question {position + 1} of {item.total}")
     st.markdown(f"**{item.prompt}**")
 
-    is_multi = item.question_format == "multiple_response"
-    if is_multi:
-        st.caption("Select ALL that apply (multiple-response: graded all-or-nothing).")
-        prior = set(item.selected_option_ids)
-        selected = [
-            o.option_id
-            for o in item.options
-            if st.checkbox(
-                o.text,
-                value=o.option_id in prior,
-                key=f"scored_choice_{session_id}_{position}_{o.option_id}",
-            )
-        ]
-    else:
-        default = item.selected_option_ids[0] if item.selected_option_ids else None
-        options = [o.option_id for o in item.options]
-        index = options.index(default) if default in options else None
-        choice = st.radio(
-            "Your answer",
-            options=options,
-            index=index,
-            format_func=lambda oid: next(o.text for o in item.options if o.option_id == oid),
-            key=f"scored_choice_{session_id}_{position}",
-        )
-        selected = [choice] if choice is not None else []
+    # Render the answer widget appropriate to the question format. Each branch
+    # produces a `commit` callable that persists the current selection.
+    commit = _render_answer_widget(runtime, session_id, position, item)
 
     nav1, nav2, nav3 = st.columns(3)
     with nav1:
         if st.button("Save & previous", key="scored_prev", disabled=position == 0):
-            _save(runtime, session_id, item.question_id, selected)
+            commit()
             st.session_state[_POS_KEY] = position - 1
             st.rerun()
     with nav2:
         if st.button("Save & next", key="scored_next", disabled=position >= item.total - 1):
-            _save(runtime, session_id, item.question_id, selected)
+            commit()
             st.session_state[_POS_KEY] = position + 1
             st.rerun()
     with nav3:
         if st.button("Save answer", key="scored_save"):
-            _save(runtime, session_id, item.question_id, selected)
+            commit()
             st.toast("Answer saved.")
 
     st.divider()
     sub1, sub2 = st.columns(2)
     with sub1:
         if st.button("Submit session", key="scored_submit", type="primary"):
-            _save(runtime, session_id, item.question_id, selected)
+            commit()
             runtime.scored.submit(session_id=session_id, event_id=f"submit-{uuid.uuid4().hex}")
             st.session_state.pop(_POS_KEY, None)
             st.rerun()
@@ -136,10 +116,117 @@ def _render_session(runtime: StudyRuntime, learner: str, session_id: str) -> Non
             st.rerun()
 
 
-def _save(runtime: StudyRuntime, session_id: str, question_id: str, selected: list[str]) -> None:
-    runtime.scored.answer(
-        session_id=session_id, question_id=question_id, selected_option_ids=selected
+def _render_answer_widget(
+    runtime: StudyRuntime,
+    session_id: str,
+    position: int,
+    item: ScoredItemView,
+) -> Callable[[], None]:
+    """Render the format-specific answer widget; return a commit callable."""
+    fmt = item.question_format
+    key = f"{session_id}_{position}"
+
+    if fmt == "matching":
+        st.caption("Match each item on the left to one option (all pairs must be correct).")
+        prior = dict(item.selected_pairs)
+        response_ids = [r.option_id for r in item.match_responses]
+        response_text = {r.option_id: r.text for r in item.match_responses}
+        pairs: dict[str, str] = {}
+        for prompt in item.match_prompts:
+            default = prior.get(prompt.option_id)
+            index = response_ids.index(default) if default in response_ids else None
+            chosen = st.selectbox(
+                prompt.text,
+                options=response_ids,
+                index=index,
+                format_func=lambda rid: response_text[rid],
+                placeholder="Select a match...",
+                key=f"scored_match_{key}_{prompt.option_id}",
+            )
+            if chosen is not None:
+                pairs[prompt.option_id] = chosen
+
+        def commit_match() -> None:
+            runtime.scored.answer_match(
+                session_id=session_id, question_id=item.question_id, pairs=pairs
+            )
+
+        return commit_match
+
+    if fmt == "ordering":
+        st.caption("Put the steps in the correct order (the whole sequence must be right).")
+        option_ids = [o.option_id for o in item.options]
+        option_text = {o.option_id: o.text for o in item.options}
+        n = len(option_ids)
+        prior_seq = list(item.selected_option_ids)
+        ordered: list[str] = []
+        for slot in range(n):
+            default = prior_seq[slot] if slot < len(prior_seq) else None
+            index = option_ids.index(default) if default in option_ids else None
+            chosen = st.selectbox(
+                f"Step {slot + 1}",
+                options=option_ids,
+                index=index,
+                format_func=lambda oid: option_text[oid],
+                placeholder="Select a step...",
+                key=f"scored_order_{key}_{slot}",
+            )
+            if chosen is not None:
+                ordered.append(chosen)
+        if len(set(ordered)) != len(ordered):
+            st.warning("Each step may be used only once; fix duplicates before submitting.")
+
+        def commit_order() -> None:
+            # Only persist a full, duplicate-free ordering; otherwise store empty.
+            valid = len(ordered) == n and len(set(ordered)) == n
+            runtime.scored.answer(
+                session_id=session_id,
+                question_id=item.question_id,
+                selected_option_ids=ordered if valid else [],
+            )
+
+        return commit_order
+
+    if fmt == "multiple_response":
+        st.caption("Select ALL that apply (multiple-response: graded all-or-nothing).")
+        prior_ids = set(item.selected_option_ids)
+        chosen_ids = [
+            o.option_id
+            for o in item.options
+            if st.checkbox(
+                o.text,
+                value=o.option_id in prior_ids,
+                key=f"scored_choice_{key}_{o.option_id}",
+            )
+        ]
+
+        def commit_multi() -> None:
+            runtime.scored.answer(
+                session_id=session_id, question_id=item.question_id, selected_option_ids=chosen_ids
+            )
+
+        return commit_multi
+
+    # Default: single-answer multiple choice.
+    default_opt = item.selected_option_ids[0] if item.selected_option_ids else None
+    opt_ids = [o.option_id for o in item.options]
+    idx = opt_ids.index(default_opt) if default_opt in opt_ids else None
+    choice = st.radio(
+        "Your answer",
+        options=opt_ids,
+        index=idx,
+        format_func=lambda oid: next(o.text for o in item.options if o.option_id == oid),
+        key=f"scored_choice_{key}",
     )
+
+    def commit_single() -> None:
+        runtime.scored.answer(
+            session_id=session_id,
+            question_id=item.question_id,
+            selected_option_ids=[choice] if choice is not None else [],
+        )
+
+    return commit_single
 
 
 def _render_latest_result(runtime: StudyRuntime, learner: str) -> None:

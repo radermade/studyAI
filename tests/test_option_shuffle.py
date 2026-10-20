@@ -31,7 +31,9 @@ def test_scored_first_option_is_not_always_correct(scored: ScoredSessionService)
     first_ids = []
     for pos in range(view.item_count):
         item = scored.current_item(session_id=view.session_id, position=pos)
-        first_ids.append(item.options[0].option_id)
+        # Matching items carry no plain options; only inspect option-based items.
+        if item.options:
+            first_ids.append(item.options[0].option_id)
     # At least some items should present a non-'a' option first.
     assert any(oid != "a" for oid in first_ids)
 

@@ -247,7 +247,7 @@ def _ingest_rich_questions(
                 "VALUES (?, ?)",
                 (question_id, str(objective_id)),
             )
-        for option_id, text in question["options"]:
+        for option_id, text in question.get("options", ()):
             conn.execute(
                 "INSERT OR IGNORE INTO question_options (question_id, option_id, text) "
                 "VALUES (?, ?, ?)",
@@ -255,19 +255,40 @@ def _ingest_rich_questions(
             )
         conn.execute(
             "INSERT OR IGNORE INTO answer_material "
-            "(question_id, correct_option_ids, rubric, explanation) VALUES (?, ?, ?, ?)",
+            "(question_id, correct_option_ids, rubric, explanation, correct_sequence) "
+            "VALUES (?, ?, ?, ?, ?)",
             (
                 question_id,
-                json.dumps(list(question["correct_option_ids"])),
+                json.dumps(list(question.get("correct_option_ids", []))),
                 str(question["explanation"]),
                 str(question["explanation"]),
+                json.dumps(list(question.get("correct_sequence", []))),
             ),
         )
-        for option_id, (is_correct, rationale) in question["rationales"].items():
+        for option_id, (is_correct, rationale) in question.get("rationales", {}).items():
             conn.execute(
                 "INSERT OR IGNORE INTO option_rationales "
                 "(question_id, option_id, is_correct, rationale) VALUES (?, ?, ?, ?)",
                 (question_id, str(option_id), 1 if is_correct else 0, str(rationale)),
+            )
+        # Matching questions carry prompts, responses, and a private pairing key.
+        for order, (prompt_id, text) in enumerate(question.get("match_prompts", ())):
+            conn.execute(
+                "INSERT OR IGNORE INTO match_prompts (question_id, prompt_id, display_order, "
+                "text) VALUES (?, ?, ?, ?)",
+                (question_id, str(prompt_id), order, str(text)),
+            )
+        for order, (response_id, text) in enumerate(question.get("match_responses", ())):
+            conn.execute(
+                "INSERT OR IGNORE INTO match_responses (question_id, response_id, "
+                "display_order, text) VALUES (?, ?, ?, ?)",
+                (question_id, str(response_id), order, str(text)),
+            )
+        for prompt_id, response_id in question.get("match_key", {}).items():
+            conn.execute(
+                "INSERT OR IGNORE INTO match_answer_keys (question_id, prompt_id, response_id) "
+                "VALUES (?, ?, ?)",
+                (question_id, str(prompt_id), str(response_id)),
             )
 
 

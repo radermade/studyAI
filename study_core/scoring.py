@@ -11,6 +11,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from study_core.common import DOMAIN_WEIGHTS
+from study_core.grading import grade_matching, grade_ordering
 from study_core.study_models import GradeOutcome
 
 # Official full-length structure.
@@ -102,14 +103,27 @@ def grade_item(
     correct_option_ids: Sequence[str],
     *,
     answered: bool,
+    question_format: str = "multiple_choice",
+    selected_sequence: Sequence[str] | None = None,
+    correct_sequence: Sequence[str] | None = None,
+    selected_pairs: Mapping[str, str] | None = None,
+    correct_pairs: Mapping[str, str] | None = None,
 ) -> GradeOutcome:
-    """Grade one item under AIP-C01 mechanics.
+    """Grade one item under AIP-C01 mechanics, dispatching by question type.
 
-    Multiple choice and multiple response are both all-or-nothing: the selected
-    set must equal the correct set. An unanswered item is incorrect.
+    All four types are all-or-nothing; an unanswered item is always incorrect.
+
+    - multiple_choice / multiple_response: the selected option set must equal
+      the correct option set.
+    - ordering: the selected ordered sequence must equal the correct sequence.
+    - matching: the selected prompt->response pairing must equal the key.
     """
     if not answered:
         return GradeOutcome.INCORRECT
+    if question_format == "ordering":
+        return grade_ordering(selected_sequence or (), correct_sequence or ())
+    if question_format == "matching":
+        return grade_matching(selected_pairs or {}, correct_pairs or {})
     if not correct_option_ids:
         return GradeOutcome.GRADING_UNCERTAIN
     return (
